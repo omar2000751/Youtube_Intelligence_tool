@@ -149,6 +149,62 @@ IMPORTANT: Respond with ONLY valid JSON in this exact structure:
 }
 
 // ============================================================
+// NICHE EXTRACTION FROM CREATOR DESCRIPTIONS
+// ============================================================
+
+interface ExtractedNiche {
+  name: string;
+  description: string;
+  keywords: string[];
+}
+
+/**
+ * Given a user's description of creators they follow or a niche they care about,
+ * use Claude to extract the niche name, description, and relevant keywords.
+ */
+export async function extractNicheFromCreators(prompt: string): Promise<ExtractedNiche> {
+  const client = getClient();
+
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: 400,
+    messages: [
+      {
+        role: 'user',
+        content: `You are a YouTube niche analyst. A user has described some creators or content they follow. Extract the niche they belong to.
+
+User description: "${prompt}"
+
+Respond with ONLY valid JSON in this exact structure:
+{
+  "name": "Short niche name (2-4 words, e.g. 'Personal Finance', 'AI & Tech')",
+  "description": "One sentence describing the niche (max 100 chars)",
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6", "keyword7", "keyword8"]
+}
+
+Rules:
+- name must be concise and searchable
+- keywords should be what someone would search on YouTube to find this content
+- base everything strictly on the user's description`,
+      },
+    ],
+  });
+
+  const text = message.content[0];
+  if (text.type !== 'text') throw new Error('Claude returned non-text response');
+
+  const jsonMatch = text.text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Could not parse niche data from response');
+
+  const parsed = JSON.parse(jsonMatch[0]) as ExtractedNiche;
+  return {
+    name: parsed.name ?? '',
+    description: parsed.description ?? '',
+    keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 8) : [],
+  };
+}
+
+// ============================================================
 // TREND ANALYSIS
 // ============================================================
 
