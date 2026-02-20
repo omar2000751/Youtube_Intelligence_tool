@@ -35,10 +35,7 @@ create table if not exists trending_videos (
   like_count           bigint not null default 0,
   comment_count        bigint not null default 0,
   published_at         timestamptz not null,
-  -- Computed fields
-  days_since_published float generated always as (
-    extract(epoch from (now() - published_at)) / 86400
-  ) stored,
+  days_since_published float not null default 0,
   velocity_score       float not null default 0,
   -- Raw velocity = views / (subscribers * days)
   -- normalized to 0-100 scale within niche
