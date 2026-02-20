@@ -60,18 +60,15 @@ create index if not exists idx_trending_videos_captured_at on trending_videos(ca
 -- Cross-referenced signals from YouTube + Twitter/X
 -- ============================================================
 create table if not exists trends (
-  id               uuid primary key default gen_random_uuid(),
-  topic            text not null,
-  source           text not null check (source in ('youtube', 'twitter', 'combined')),
-  momentum_score   float not null default 0,   -- 0-100
-  -- Boost applied when topic appears in both YT velocity AND Twitter
-  opportunity_score float not null default 0,  -- 0-100 (momentum + cross-match bonus)
-  tweet_count      int default 0,
-  twitter_query    text,                        -- search query used
-  related_video_ids uuid[] default '{}',        -- trending_videos.id references
-  niche_id         uuid not null references niches(id) on delete cascade,
-  detected_at      timestamptz not null default now(),
-  expires_at       timestamptz not null default (now() + interval '48 hours')
+  id                uuid primary key default gen_random_uuid(),
+  topic             text not null,
+  source            text not null check (source in ('youtube')),
+  momentum_score    float not null default 0,
+  opportunity_score float not null default 0,
+  related_video_ids uuid[] default '{}',
+  niche_id          uuid not null references niches(id) on delete cascade,
+  detected_at       timestamptz not null default now(),
+  expires_at        timestamptz not null default (now() + interval '48 hours')
 );
 
 create index if not exists idx_trends_niche_id on trends(niche_id);
@@ -109,7 +106,7 @@ create index if not exists idx_video_briefs_created_at on video_briefs(created_a
 create table if not exists refresh_log (
   id         uuid primary key default gen_random_uuid(),
   niche_id   uuid not null references niches(id) on delete cascade,
-  source     text not null check (source in ('youtube', 'twitter', 'combined')),
+  source     text not null check (source in ('youtube')),
   status     text not null check (status in ('running', 'success', 'error')),
   message    text,
   videos_found int default 0,
