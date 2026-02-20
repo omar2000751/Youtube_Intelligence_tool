@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: savedBrief, error: null }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('Brief generation error:', message);
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   // Log the refresh start
   const { data: logEntry } = await supabase
     .from('refresh_log')
-    .insert({ niche_id, source: 'combined', status: 'running' })
+    .insert({ niche_id, source: 'youtube', status: 'running' })
     .select()
     .single();
 
@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
     // 4. Compute velocity scores — add stub fields required by the type
     const rawVideosForScoring = rawVideos.map((v) => ({
       ...v,
-      id: '', // DB will assign real ID on upsert
       days_since_published: Math.max(
         (Date.now() - new Date(v.published_at).getTime()) / 86_400_000,
         0.5
@@ -145,7 +144,7 @@ export async function POST(request: NextRequest) {
       .from('trending_videos')
       .upsert(finalVideos, { onConflict: 'youtube_id' });
 
-    if (upsertError) throw upsertError;
+    if (upsertError) throw new Error(upsertError.message);
 
     // 8. AI trend identification
     const trendTopics = await identifyTrendTopics({
@@ -227,7 +226,7 @@ export async function POST(request: NextRequest) {
       error: null,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? JSON.stringify(err);
     console.error('Trend fetch error:', message);
 
     if (logId) {
