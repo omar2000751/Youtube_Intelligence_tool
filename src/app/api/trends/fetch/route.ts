@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
       error: null,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : String(err);
     console.error('Trend fetch error:', message);
 
     if (logId) {

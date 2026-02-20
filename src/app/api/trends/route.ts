@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       .order('opportunity_score', { ascending: false })
       .limit(20);
 
-    if (error) throw error;
+    if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
 
     // Enrich with related videos
     const enriched = await Promise.all(
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: enriched, error: null });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }
 }

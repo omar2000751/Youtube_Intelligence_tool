@@ -95,11 +95,11 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (saveError) throw saveError;
+    if (saveError) return NextResponse.json({ data: null, error: saveError.message }, { status: 500 });
 
     return NextResponse.json({ data: savedBrief, error: null }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : String(err);
     console.error('Brief generation error:', message);
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }

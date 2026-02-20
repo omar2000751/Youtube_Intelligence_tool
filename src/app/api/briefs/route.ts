@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (error) throw error;
+    if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
     return NextResponse.json({ data, error: null });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }
 }

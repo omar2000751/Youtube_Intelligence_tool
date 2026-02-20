@@ -15,10 +15,10 @@ export async function GET() {
       .select('*')
       .order('name');
 
-    if (error) throw error;
+    if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
     return NextResponse.json({ data, error: null });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }
 }
@@ -56,10 +56,10 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 });
     return NextResponse.json({ data, error: null }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }
 }
