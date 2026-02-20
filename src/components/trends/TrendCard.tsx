@@ -1,12 +1,11 @@
 'use client';
 
-import { ExternalLink, TrendingUp, Twitter, Youtube, Zap } from 'lucide-react';
+import { TrendingUp, Youtube } from 'lucide-react';
 import { Trend } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { cn, formatNumber, formatRelativeTime, getScoreColor, getScoreBg } from '@/lib/utils';
+import { cn, formatRelativeTime, getScoreColor, getScoreBg } from '@/lib/utils';
 
 interface TrendCardProps {
   trend: Trend;
@@ -18,14 +17,10 @@ interface TrendCardProps {
 
 const SOURCE_ICONS = {
   youtube: <Youtube className="h-3 w-3" />,
-  twitter: <Twitter className="h-3 w-3" />,
-  combined: <Zap className="h-3 w-3" />,
 };
 
 const SOURCE_LABELS = {
   youtube: 'YouTube',
-  twitter: 'Twitter/X',
-  combined: 'Cross-Platform',
 };
 
 export function TrendCard({ trend, rank, onClick, onGenerateBrief, isGenerating }: TrendCardProps) {
@@ -49,16 +44,7 @@ export function TrendCard({ trend, rank, onClick, onGenerateBrief, isGenerating 
             {/* Topic + source badge */}
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-sm truncate">{trend.topic}</h3>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium',
-                  trend.source === 'combined'
-                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                    : trend.source === 'youtube'
-                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                    : 'bg-sky-500/20 text-sky-400 border-sky-500/30'
-                )}
-              >
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium bg-red-500/20 text-red-400 border-red-500/30">
                 {SOURCE_ICONS[trend.source]}
                 {SOURCE_LABELS[trend.source]}
               </span>
@@ -87,12 +73,6 @@ export function TrendCard({ trend, rank, onClick, onGenerateBrief, isGenerating 
 
             {/* Meta */}
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {trend.tweet_count > 0 && (
-                <span className="flex items-center gap-1">
-                  <Twitter className="h-3 w-3" />
-                  {formatNumber(trend.tweet_count)} tweets
-                </span>
-              )}
               {(trend.related_videos?.length ?? 0) > 0 && (
                 <span className="flex items-center gap-1">
                   <Youtube className="h-3 w-3" />

@@ -3,15 +3,13 @@
  * Triggers a full data refresh for a niche:
  * 1. Fetches YouTube high-velocity videos
  * 2. Scores velocity
- * 3. Fetches Twitter momentum
- * 4. Cross-references and stores trends
+ * 3. Identifies trends via AI and stores them
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isMockMode, MOCK_TRENDING_VIDEOS, MOCK_TRENDS } from '@/lib/mock-data';
 import { createAdminSupabaseClient } from '@/lib/supabase-server';
 import { fetchNicheVideos, extractCommentRequests } from '@/lib/youtube';
-import { analyzeNicheMomentum } from '@/lib/twitter';
 import { scoreVideos } from '@/lib/velocity';
 import { computeOpportunityScore } from '@/lib/velocity';
 import { extractCoreTopic, identifyTrendTopics } from '@/lib/anthropic';
@@ -149,13 +147,7 @@ export async function POST(request: NextRequest) {
 
     if (upsertError) throw upsertError;
 
-    // 8. Twitter momentum analysis
-    const twitterResults = await analyzeNicheMomentum(nicheData.keywords);
-    const twitterMap = Object.fromEntries(
-      twitterResults.map((r) => [r.topic, r])
-    );
-
-    // 9. AI trend identification
+    // 8. AI trend identification
     const trendTopics = await identifyTrendTopics({
       videos: finalVideos.map((v) => ({
         title: v.title,
@@ -194,22 +186,15 @@ export async function POST(request: NextRequest) {
               .reduce((s, v) => s + v.velocity_score, 0) / relatedVideoIds.length
           : 50;
 
-      const twitterData = twitterMap[tt.topic] ?? { momentumScore: 0, tweetCount: 0 };
-      const hasCrossMatch = twitterData.momentumScore > 20;
-
       const opportunityScore = computeOpportunityScore({
         youtubeMomentum: avgYoutubeVelocity,
-        twitterMomentum: twitterData.momentumScore,
-        crossMatchBonus: hasCrossMatch,
       });
 
       return {
         topic: tt.topic,
-        source: hasCrossMatch ? 'combined' : 'youtube',
+        source: 'youtube',
         momentum_score: Math.round(avgYoutubeVelocity),
         opportunity_score: opportunityScore,
-        tweet_count: twitterData.tweetCount ?? 0,
-        twitter_query: tt.topic,
         related_video_ids: relatedVideoIds,
         niche_id,
         expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),

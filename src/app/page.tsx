@@ -6,8 +6,6 @@ import {
   TrendingUp,
   Zap,
   Youtube,
-  Twitter,
-  ChevronRight,
   BarChart3,
   Sparkles,
   AlertCircle,
@@ -86,7 +84,7 @@ export default function DashboardPage() {
   async function handleRefresh() {
     if (!selectedNiche) return;
     setRefreshing(true);
-    const toastId = toast.loading('Fetching fresh data from YouTube & Twitter...');
+    const toastId = toast.loading('Fetching fresh data from YouTube...');
     try {
       const res = await fetch('/api/trends/fetch', {
         method: 'POST',
@@ -255,15 +253,6 @@ export default function DashboardPage() {
           {!loadingTrends && trends.length > 0 && (
             <div className="px-6 py-3 border-b flex items-center gap-6 text-sm flex-shrink-0">
               <div className="flex items-center gap-1.5 text-muted-foreground">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <span>
-                  <strong className="text-foreground">
-                    {trends.filter((t) => t.source === 'combined').length}
-                  </strong>{' '}
-                  cross-platform
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Zap className="h-4 w-4 text-yellow-500" />
                 <span>
                   <strong className="text-foreground">
@@ -306,7 +295,7 @@ export default function DashboardPage() {
                 <div className="text-center py-20 text-muted-foreground">
                   <RefreshCw className="h-12 w-12 mx-auto mb-4 opacity-30" />
                   <p className="font-medium mb-2">No trends yet for this niche</p>
-                  <p className="text-sm mb-4">Click "Refresh Data" to fetch the latest from YouTube & Twitter</p>
+                  <p className="text-sm mb-4">Click "Refresh Data" to fetch the latest from YouTube</p>
                   <Button onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
                     Fetch Trends Now

@@ -37,11 +37,9 @@ export interface TrendingVideo {
 export interface Trend {
   id: string;
   topic: string;
-  source: 'youtube' | 'twitter' | 'combined';
+  source: 'youtube';
   momentum_score: number;
   opportunity_score: number;
-  tweet_count: number;
-  twitter_query: string | null;
   related_video_ids: string[];
   niche_id: string;
   detected_at: string;
@@ -73,7 +71,7 @@ export interface VideoBrief {
 export interface RefreshLog {
   id: string;
   niche_id: string;
-  source: 'youtube' | 'twitter' | 'combined';
+  source: 'youtube';
   status: 'running' | 'success' | 'error';
   message: string | null;
   videos_found: number;

@@ -72,16 +72,11 @@ export function velocityLabel(score: number): {
 }
 
 /**
- * Compute cross-match opportunity score.
- * Boosts when a topic appears in both YouTube velocity spikes AND Twitter momentum.
+ * Compute opportunity score based on YouTube momentum.
  */
 export function computeOpportunityScore(params: {
   youtubeMomentum: number; // 0-100
-  twitterMomentum: number; // 0-100, 0 if no twitter data
-  crossMatchBonus: boolean; // true if same topic detected on both
 }): number {
-  const { youtubeMomentum, twitterMomentum, crossMatchBonus } = params;
-  const base = youtubeMomentum * 0.6 + twitterMomentum * 0.4;
-  const bonus = crossMatchBonus ? 15 : 0;
-  return Math.min(100, Math.round(base + bonus));
+  const { youtubeMomentum } = params;
+  return Math.min(100, Math.round(youtubeMomentum));
 }

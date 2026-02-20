@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Twitter, Youtube, TrendingUp, MessageSquare, Zap, X } from 'lucide-react';
+import { ExternalLink, Youtube, TrendingUp, MessageSquare, Zap, X } from 'lucide-react';
 import Image from 'next/image';
 import { Trend } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -28,18 +28,9 @@ export function TrendDetail({ trend, onGenerateBrief, isGenerating, onClose }: T
       <div className="flex items-start justify-between p-6 border-b">
         <div className="flex-1 min-w-0 pr-4">
           <div className="flex items-center gap-2 mb-2">
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium',
-                trend.source === 'combined'
-                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                  : trend.source === 'youtube'
-                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                  : 'bg-sky-500/20 text-sky-400 border-sky-500/30'
-              )}
-            >
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium bg-red-500/20 text-red-400 border-red-500/30">
               <Zap className="h-3 w-3" />
-              {trend.source === 'combined' ? 'Cross-Platform Trend' : trend.source === 'youtube' ? 'YouTube Trend' : 'Twitter Trend'}
+              YouTube Trend
             </span>
           </div>
           <h2 className="text-xl font-bold">{trend.topic}</h2>
@@ -68,49 +59,16 @@ export function TrendDetail({ trend, onGenerateBrief, isGenerating, onClose }: T
       <ScrollArea className="flex-1">
         <div className="p-6 space-y-6">
           {/* Score breakdown */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4" />
-                  YouTube Momentum
-                </span>
-                <span className="font-bold">{trend.momentum_score}/100</span>
-              </div>
-              <Progress value={trend.momentum_score} className="h-2" />
+          <div className="rounded-lg border p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4" />
+                YouTube Momentum
+              </span>
+              <span className="font-bold">{trend.momentum_score}/100</span>
             </div>
-
-            <div className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Twitter className="h-4 w-4" />
-                  Social Momentum
-                </span>
-                <span className="font-bold">
-                  {trend.tweet_count > 0 ? formatNumber(trend.tweet_count) + ' tweets' : 'N/A'}
-                </span>
-              </div>
-              {trend.tweet_count > 0 && (
-                <Progress value={Math.min(100, (trend.tweet_count / 50000) * 100)} className="h-2" />
-              )}
-            </div>
+            <Progress value={trend.momentum_score} className="h-2" />
           </div>
-
-          {trend.source === 'combined' && (
-            <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-4">
-              <div className="flex items-start gap-3">
-                <Zap className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-purple-300">Cross-Platform Boost</p>
-                  <p className="text-xs text-purple-400/80 mt-0.5">
-                    This topic is trending on both YouTube and Twitter/X simultaneously, giving it a
-                    higher opportunity score. Act fast — cross-platform trends typically peak within
-                    48–72 hours.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Related Videos */}
           {trend.related_videos && trend.related_videos.length > 0 && (
@@ -191,26 +149,6 @@ export function TrendDetail({ trend, onGenerateBrief, isGenerating, onClose }: T
             </div>
           )}
 
-          {/* Twitter context */}
-          {trend.twitter_query && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Twitter className="h-4 w-4 text-sky-400" />
-                Twitter/X Signal
-              </h3>
-              <div className="rounded-lg border p-3 space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Search query: <span className="text-foreground font-mono">{trend.twitter_query}</span>
-                </p>
-                {trend.tweet_count > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-sky-400">{formatNumber(trend.tweet_count)}</span> tweets
-                    in the last 7 days
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </ScrollArea>
 

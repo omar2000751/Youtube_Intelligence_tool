@@ -57,7 +57,6 @@ interface BriefInput {
   topic: string;
   nicheName: string;
   relatedVideos: Pick<TrendingVideo, 'title' | 'view_count' | 'velocity_score' | 'core_topic'>[];
-  twitterContext?: string; // sample tweets or trends
   commentRequests?: string[]; // "can you make a video on X" patterns
 }
 
@@ -74,7 +73,7 @@ interface GeneratedBrief {
  */
 export async function generateVideoBrief(input: BriefInput): Promise<GeneratedBrief> {
   const client = getClient();
-  const { topic, nicheName, relatedVideos, twitterContext, commentRequests } = input;
+  const { topic, nicheName, relatedVideos, commentRequests } = input;
 
   const videoContext = relatedVideos
     .slice(0, 5)
@@ -83,10 +82,6 @@ export async function generateVideoBrief(input: BriefInput): Promise<GeneratedBr
         `- "${v.title}" (${(v.view_count / 1000).toFixed(0)}k views, velocity: ${v.velocity_score}/100)`
     )
     .join('\n');
-
-  const twitterSection = twitterContext
-    ? `\nTwitter/X momentum context:\n${twitterContext}`
-    : '';
 
   const requestsSection =
     commentRequests && commentRequests.length > 0
@@ -100,7 +95,6 @@ Topic: ${topic}
 
 Related high-velocity videos in this niche:
 ${videoContext}
-${twitterSection}
 ${requestsSection}
 
 Generate a video brief with:

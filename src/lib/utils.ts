@@ -38,8 +38,6 @@ export function getScoreBg(score: number): string {
 }
 
 export function getSourceBadgeStyle(source: string): string {
-  if (source === 'combined') return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
   if (source === 'youtube') return 'bg-red-500/20 text-red-400 border-red-500/30';
-  if (source === 'twitter') return 'bg-sky-500/20 text-sky-400 border-sky-500/30';
   return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
 }
