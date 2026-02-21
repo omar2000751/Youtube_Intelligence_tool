@@ -41,3 +41,24 @@ export function getSourceBadgeStyle(source: string): string {
   if (source === 'youtube') return 'bg-red-500/20 text-red-400 border-red-500/30';
   return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
 }
+
+/**
+ * Safely extract a human-readable error message from any value.
+ * Prevents [object Object] from showing up in toast notifications.
+ */
+export function getErrorMessage(err: unknown): string {
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    // Handle {message: "..."} shaped objects (e.g. Supabase errors)
+    if ('message' in err && typeof (err as Record<string, unknown>).message === 'string') {
+      return (err as Record<string, unknown>).message as string;
+    }
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'An unknown error occurred';
+    }
+  }
+  return String(err ?? 'An unknown error occurred');
+}

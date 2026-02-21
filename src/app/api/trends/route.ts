@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: enriched, error: null });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
     return NextResponse.json({ data: null, error: message }, { status: 500 });
   }
 }

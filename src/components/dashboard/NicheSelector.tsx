@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 
 interface NicheSelectorProps {
   niches: Niche[];
@@ -78,14 +78,14 @@ export function NicheSelector({
         body: JSON.stringify({ prompt: creatorPrompt }),
       });
       const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error ?? 'Extraction failed');
+      if (!res.ok || json.error) throw new Error(getErrorMessage(json.error) || 'Extraction failed');
       const { name: n, description: d, keywords: kw } = json.data;
       setName(n);
       setDescription(d);
       setKeywordsInput(Array.isArray(kw) ? kw.join(', ') : '');
       setStep('form');
     } catch (err) {
-      setExtractError(err instanceof Error ? err.message : 'Failed to extract niche');
+      setExtractError(getErrorMessage(err) || 'Failed to extract niche');
     } finally {
       setExtracting(false);
     }
@@ -117,11 +117,11 @@ export function NicheSelector({
         body: JSON.stringify({ name: name.trim(), description, keywords, color: selectedColor }),
       });
       const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error ?? 'Failed to create niche');
+      if (!res.ok || json.error) throw new Error(getErrorMessage(json.error) || 'Failed to create niche');
       onNicheCreated(json.data);
       setDialogOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error creating niche');
+      setError(getErrorMessage(err) || 'Error creating niche');
     } finally {
       setLoading(false);
     }

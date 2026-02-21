@@ -20,7 +20,7 @@ import { BriefDisplay } from '@/components/briefs/BriefDisplay';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 
 type Panel = 'trend' | 'brief' | null;
 
@@ -45,12 +45,12 @@ export default function DashboardPage() {
       try {
         const res = await fetch('/api/niches');
         const json = await res.json();
-        if (json.error) throw new Error(json.error);
+        if (json.error) throw new Error(getErrorMessage(json.error));
         setNiches(json.data ?? []);
         // Auto-select first niche
         if (json.data?.length > 0) setSelectedNiche(json.data[0]);
       } catch (err) {
-        toast.error('Failed to load niches');
+        toast.error(getErrorMessage(err) || 'Failed to load niches');
       } finally {
         setLoadingNiches(false);
       }
@@ -67,10 +67,10 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/trends?niche_id=${nicheId}`);
       const json = await res.json();
-      if (json.error) throw new Error(json.error);
+      if (json.error) throw new Error(getErrorMessage(json.error));
       setTrends(json.data ?? []);
     } catch (err) {
-      toast.error('Failed to load trends');
+      toast.error(getErrorMessage(err) || 'Failed to load trends');
     } finally {
       setLoadingTrends(false);
     }
@@ -92,11 +92,11 @@ export default function DashboardPage() {
         body: JSON.stringify({ niche_id: selectedNiche.id }),
       });
       const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error ?? 'Fetch failed');
+      if (!res.ok || json.error) throw new Error(getErrorMessage(json.error) || 'Fetch failed');
       toast.success(json.data.message, { id: toastId });
       await loadTrends(selectedNiche.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Refresh failed', { id: toastId });
+      toast.error(getErrorMessage(err) || 'Refresh failed', { id: toastId });
     } finally {
       setRefreshing(false);
     }
@@ -118,12 +118,12 @@ export default function DashboardPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok || json.error) throw new Error(json.error ?? 'Generation failed');
+      if (!res.ok || json.error) throw new Error(getErrorMessage(json.error) || 'Generation failed');
       setActiveBrief(json.data);
       setActivePanel('brief');
       toast.success('Brief generated!', { id: toastId });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Brief generation failed', { id: toastId });
+      toast.error(getErrorMessage(err) || 'Brief generation failed', { id: toastId });
     } finally {
       setGeneratingBriefFor(null);
     }
