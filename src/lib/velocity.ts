@@ -1,4 +1,4 @@
-import { TrendingVideo, VelocityInput } from '@/types';
+import { VelocityInput } from '@/types';
 
 /**
  * Compute raw velocity score for a single video.
@@ -35,12 +35,19 @@ export function normalizeVelocityScores(rawScores: number[]): number[] {
   return cappedScores.map((s) => Math.round(((s - min) / range) * 100));
 }
 
+/** Minimum fields needed by scoreVideos */
+interface Scoreable {
+  view_count: number;
+  channel_subscribers: number;
+  days_since_published: number;
+}
+
 /**
  * Given a list of videos, compute and attach normalized velocity scores.
  */
-export function scoreVideos(
-  videos: Omit<TrendingVideo, 'velocity_score'>[]
-): (Omit<TrendingVideo, 'velocity_score'> & { velocity_score: number })[] {
+export function scoreVideos<T extends Scoreable>(
+  videos: T[]
+): (T & { velocity_score: number })[] {
   const rawScores = videos.map((v) =>
     computeRawVelocity({
       views: v.view_count,
