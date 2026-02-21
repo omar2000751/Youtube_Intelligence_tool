@@ -66,15 +66,21 @@ export async function POST(request: NextRequest) {
       // defaults: maxResults=300, publishedAfterDays=180
     });
 
+    // Strip null bytes and ASCII control characters (except \t \n \r) from strings.
+    // YouTube text fields can contain \u0000 which causes PostgreSQL to reject the
+    // entire upsert with "invalid input syntax for type json" via PostgREST.
+    const clean = (s: string | null | undefined): string | null =>
+      s ? s.replace(/[\u0000\x01-\x08\x0b\x0c\x0e-\x1f]/g, '') : null;
+
     // 3. Build raw records
     const rawVideos = videos.map((v) => ({
       youtube_id: v.id,
-      title: v.snippet.title,
-      description: v.snippet.description?.slice(0, 1000) ?? null,
+      title: clean(v.snippet.title) ?? v.id,
+      description: clean(v.snippet.description?.slice(0, 1000)),
       thumbnail_url:
         v.snippet.thumbnails?.high?.url ?? v.snippet.thumbnails?.medium?.url ?? null,
       channel_id: v.snippet.channelId,
-      channel_name: v.snippet.channelTitle,
+      channel_name: clean(v.snippet.channelTitle) ?? v.snippet.channelId,
       channel_subscribers: channelStats[v.snippet.channelId] ?? 1000,
       view_count: parseInt(v.statistics.viewCount ?? '0', 10),
       like_count: parseInt(v.statistics.likeCount ?? '0', 10),
@@ -127,7 +133,8 @@ export async function POST(request: NextRequest) {
     const finalVideos = scored.map((v) => ({
       ...v,
       core_topic: topicMap[v.youtube_id] ?? null,
-      comment_requests: commentMap[v.youtube_id] ?? [],
+      // clean() applied again to comment strings — they come from raw user-generated text
+      comment_requests: (commentMap[v.youtube_id] ?? []).map(s => clean(s) ?? '').filter(Boolean),
     }));
     const { error: upsertError } = await supabase
       .from('trending_videos')
