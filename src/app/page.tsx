@@ -3,16 +3,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   RefreshCw,
-  TrendingUp,
   Zap,
-  Youtube,
   BarChart3,
   Sparkles,
   AlertCircle,
   FileText,
+  TrendingUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Niche, Trend, VideoBrief } from '@/types';
+import { PILLAR_META, Pillar } from '@/lib/pillars';
 import { NicheSelector } from '@/components/dashboard/NicheSelector';
 import { TrendCard } from '@/components/trends/TrendCard';
 import { TrendDetail } from '@/components/trends/TrendDetail';
@@ -129,8 +129,13 @@ export default function DashboardPage() {
   }
 
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
-  const highOpportunityCount = trends.filter((t) => t.opportunity_score >= 80).length;
   const trackedVideoCount = trends.reduce((s, t) => s + (t.related_videos?.length ?? 0), 0);
+  // Per-pillar video counts for the stats strip
+  const pillarCounts = (['Tutorials', 'Reactions', 'Experiments'] as Pillar[]).map((p) => ({
+    pillar: p,
+    meta: PILLAR_META[p],
+    count: trends.find((t) => t.topic === p)?.related_videos?.length ?? 0,
+  }));
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -241,8 +246,10 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-sm text-muted-foreground pl-5">
                     {loadingTrends
-                      ? 'Loading opportunities...'
-                      : `${trends.length} trending topic${trends.length === 1 ? '' : 's'} detected`}
+                      ? 'Classifying videos into content pillars...'
+                      : trends.length > 0
+                        ? `${trackedVideoCount} videos across ${trends.length} content pillar${trends.length !== 1 ? 's' : ''}`
+                        : 'No data yet — hit Refresh to scan YouTube'}
                   </p>
                 </>
               ) : (
@@ -264,30 +271,26 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Stats strip */}
+          {/* Stats strip — per-pillar video counts */}
           {!loadingTrends && trends.length > 0 && (
-            <div className="px-6 py-2.5 border-b border-border flex items-center gap-5 flex-shrink-0">
-              <div className="flex items-center gap-1.5 text-xs">
-                <Zap className="h-3.5 w-3.5 text-primary" />
+            <div className="px-6 py-2.5 border-b border-border flex items-center gap-4 flex-shrink-0 overflow-x-auto">
+              {pillarCounts.map(({ pillar, meta, count }, i) => (
+                <div key={pillar} className="flex items-center gap-4 flex-shrink-0">
+                  {i > 0 && <div className="h-3.5 w-px bg-border" />}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-base leading-none">{meta.emoji}</span>
+                    <span className="text-muted-foreground">
+                      <strong className={meta.textClass}>{count}</strong>{' '}
+                      {pillar.toLowerCase()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <div className="h-3.5 w-px bg-border flex-shrink-0" />
+              <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                <Zap className="h-3 w-3 text-muted-foreground/60" />
                 <span className="text-muted-foreground">
-                  <strong className="text-foreground font-bold">{highOpportunityCount}</strong>{' '}
-                  high opportunity
-                </span>
-              </div>
-              <div className="h-3.5 w-px bg-border" />
-              <div className="flex items-center gap-1.5 text-xs">
-                <Youtube className="h-3.5 w-3.5 text-red-400" />
-                <span className="text-muted-foreground">
-                  <strong className="text-foreground font-bold">{trackedVideoCount}</strong>{' '}
-                  tracked videos
-                </span>
-              </div>
-              <div className="h-3.5 w-px bg-border" />
-              <div className="flex items-center gap-1.5 text-xs">
-                <TrendingUp className="h-3.5 w-3.5 text-green-400" />
-                <span className="text-muted-foreground">
-                  <strong className="text-foreground font-bold">{trends.length}</strong>{' '}
-                  trend{trends.length !== 1 ? 's' : ''}
+                  <strong className="text-foreground">{trackedVideoCount}</strong> total videos
                 </span>
               </div>
             </div>
