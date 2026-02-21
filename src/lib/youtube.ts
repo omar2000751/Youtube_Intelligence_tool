@@ -21,20 +21,36 @@ function apiKey(): string {
 const MIN_VIEW_COUNT = 5_000;
 
 /**
- * Title substrings that indicate non-English or off-topic content.
+ * Title substrings that indicate off-topic or non-educational content.
  * Matched case-insensitively; a single hit disqualifies the video.
+ *
+ * NOTE: 'song' and 'music' are intentionally excluded — they're too broad
+ * and would block legitimate AI-music-tools content. Meme/short-form slop
+ * is caught by the Shorts duration check and the hashtag-density check below.
  */
 const NEGATIVE_TITLE_KEYWORDS = [
-  // Music / entertainment
-  'song', 'music', 'album', 'lyrics', ' mv',
+  // Pure music/entertainment — use specific phrases, not single words
+  'official music video', 'official video', 'official audio', 'lyrics video',
+  'music video',
   // Film / TV
   'movie', 'film', 'trailer', 'episode', 'season',
-  // Gaming (generic — AI gameplay is kept because it doesn't contain just "gameplay")
+  // Gaming
   'gameplay', "let's play", 'walkthrough',
-  // Non-English language markers commonly found in titles
+  // Non-English language markers commonly found in English-title videos
   'hindi', 'urdu', 'tamil', 'telugu', 'marathi', 'kannada',
   'bengali', 'punjabi', 'gujarati', 'malayalam',
 ];
+
+/**
+ * Parse an ISO 8601 duration string (e.g. "PT1M30S", "PT45S") to seconds.
+ */
+function parseIsoDuration(iso: string): number {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (parseInt(m[1] ?? '0', 10) * 3600)
+       + (parseInt(m[2] ?? '0', 10) * 60)
+       + parseInt(m[3] ?? '0', 10);
+}
 
 /**
  * Matches non-Latin Unicode blocks used in non-English scripts.
@@ -49,11 +65,11 @@ const NON_LATIN_SCRIPT_RE =
 /**
  * Returns true if the video passes all quality gates:
  *  1. Language tag — if defaultAudioLanguage/defaultLanguage is set it must start with "en".
- *  2. Unicode script — reject titles containing non-Latin scripts (Devanagari, Arabic,
- *     CJK, Korean, Cyrillic, Thai, Hiragana/Katakana). This catches non-English videos
- *     that omit the language tag entirely (very common on YouTube).
- *  3. Minimum views — removes brand-new or zero-traction content.
- *  4. Negative title keywords — removes music, movies, explicit language markers.
+ *  2. Unicode script — reject titles containing non-Latin scripts.
+ *  3. YouTube Shorts — reject videos shorter than 60 seconds (not educational content).
+ *  4. Hashtag spam — reject titles with ≥ 2 hashtags (meme/slop pattern).
+ *  5. Minimum views — removes brand-new or zero-traction content.
+ *  6. Negative title keywords — removes music videos, movies, explicit language markers.
  */
 function passesQualityFilters(video: YouTubeVideoItem): boolean {
   const title = video.snippet.title;
@@ -67,11 +83,20 @@ function passesQualityFilters(video: YouTubeVideoItem): boolean {
   // 2. Unicode script detection — reliable even when language tag is absent
   if (NON_LATIN_SCRIPT_RE.test(title)) return false;
 
-  // 3. View count floor
+  // 3. YouTube Shorts filter — anything under 60 s is a Short, not creator-useful content
+  const durationSecs = parseIsoDuration(video.contentDetails?.duration ?? '');
+  if (durationSecs > 0 && durationSecs < 60) return false;
+
+  // 4. Hashtag spam — meme/slop content stuffs multiple hashtags into titles
+  //    e.g. "#memes #ai #grox #chatgpt" — one hashtag (a topic tag) is fine
+  const hashtagCount = (title.match(/#\w+/g) ?? []).length;
+  if (hashtagCount >= 2) return false;
+
+  // 5. View count floor
   const views = parseInt(video.statistics.viewCount ?? '0', 10);
   if (views < MIN_VIEW_COUNT) return false;
 
-  // 4. Negative keyword check (title)
+  // 6. Negative keyword check (title)
   if (NEGATIVE_TITLE_KEYWORDS.some((kw) => titleLower.includes(kw))) return false;
 
   return true;
