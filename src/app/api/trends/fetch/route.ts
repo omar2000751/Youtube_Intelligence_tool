@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // 2. Fetch YouTube videos
     const { videos, channelStats } = await fetchNicheVideos({
       keywords: nicheData.keywords,
-      maxResults: 50,
+      maxResults: 150,    // pre-filter candidate pool; quality filters reduce this further
       publishedAfterDays: 30,
     });
 

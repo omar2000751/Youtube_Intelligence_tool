@@ -94,6 +94,8 @@ export interface YouTubeVideoItem {
     publishedAt: string;
     channelId: string;
     channelTitle: string;
+    defaultAudioLanguage?: string;  // e.g. "en", "hi", "es"
+    defaultLanguage?: string;       // fallback language tag
     thumbnails: {
       high?: { url: string };
       medium?: { url: string };
