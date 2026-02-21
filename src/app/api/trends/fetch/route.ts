@@ -135,7 +135,10 @@ export async function POST(request: NextRequest) {
       .upsert(finalVideos, { onConflict: 'youtube_id' });
     if (upsertError) throw new Error(upsertError.message);
 
-    // 8. Re-fetch stored videos with titles for pillar classification
+    // 8. Re-fetch stored videos — SCOPED TO THIS REFRESH ONLY
+    // Critical: query by youtube_id IN (current batch) rather than all niche videos.
+    // Without this, old pre-filter rows with high velocity scores would surface here
+    // even though they were excluded by the quality filters above.
     interface StoredVideo {
       id: string;
       youtube_id: string;
@@ -143,10 +146,11 @@ export async function POST(request: NextRequest) {
       core_topic: string | null;
       velocity_score: number;
     }
+    const currentYoutubeIds = finalVideos.map((v) => v.youtube_id);
     const { data: storedVideos } = await supabase
       .from('trending_videos')
       .select('id, youtube_id, title, core_topic, velocity_score')
-      .eq('niche_id', niche_id)
+      .in('youtube_id', currentYoutubeIds)
       .order('velocity_score', { ascending: false })
       .limit(50);
     const stored: StoredVideo[] = (storedVideos ?? []) as StoredVideo[];

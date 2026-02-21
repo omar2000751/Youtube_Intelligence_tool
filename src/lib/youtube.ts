@@ -37,24 +37,41 @@ const NEGATIVE_TITLE_KEYWORDS = [
 ];
 
 /**
+ * Matches non-Latin Unicode blocks used in non-English scripts.
+ * A hit means the title (or description) contains Devanagari, Arabic/Urdu,
+ * CJK (Chinese/Japanese), Korean, Cyrillic, Thai, or Hiragana/Katakana.
+ * This is the reliable fallback when YouTube omits defaultAudioLanguage
+ * (which happens frequently for non-English channels).
+ */
+const NON_LATIN_SCRIPT_RE =
+  /[\u0600-\u06FF\u0750-\u077F\u0900-\u097F\u4E00-\u9FFF\uAC00-\uD7AF\u0400-\u04FF\u0E00-\u0E7F\u3040-\u30FF]/;
+
+/**
  * Returns true if the video passes all quality gates:
- *  1. Language — if defaultAudioLanguage is explicitly set it must start with "en".
- *     Many English videos omit this field entirely, so blank is accepted.
- *  2. Minimum views — removes very-new or low-effort content.
- *  3. No negative title keywords — removes music, movies, non-English content.
+ *  1. Language tag — if defaultAudioLanguage/defaultLanguage is set it must start with "en".
+ *  2. Unicode script — reject titles containing non-Latin scripts (Devanagari, Arabic,
+ *     CJK, Korean, Cyrillic, Thai, Hiragana/Katakana). This catches non-English videos
+ *     that omit the language tag entirely (very common on YouTube).
+ *  3. Minimum views — removes brand-new or zero-traction content.
+ *  4. Negative title keywords — removes music, movies, explicit language markers.
  */
 function passesQualityFilters(video: YouTubeVideoItem): boolean {
-  // 1. Language: only reject if the tag is set and is NOT English
+  const title = video.snippet.title;
+  const titleLower = title.toLowerCase();
+
+  // 1. Language tag: if set, must be English
   const lang =
     video.snippet.defaultAudioLanguage ?? video.snippet.defaultLanguage ?? '';
   if (lang && !lang.startsWith('en')) return false;
 
-  // 2. View count floor
+  // 2. Unicode script detection — reliable even when language tag is absent
+  if (NON_LATIN_SCRIPT_RE.test(title)) return false;
+
+  // 3. View count floor
   const views = parseInt(video.statistics.viewCount ?? '0', 10);
   if (views < MIN_VIEW_COUNT) return false;
 
-  // 3. Negative keyword check (title)
-  const titleLower = video.snippet.title.toLowerCase();
+  // 4. Negative keyword check (title)
   if (NEGATIVE_TITLE_KEYWORDS.some((kw) => titleLower.includes(kw))) return false;
 
   return true;
