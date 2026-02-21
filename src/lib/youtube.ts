@@ -299,48 +299,37 @@ export async function extractCommentRequests(
 /**
  * Full pipeline: broad multi-search → deduplicate → enrich → quality filter.
  *
- * Search strategy — each keyword chunk is searched twice in parallel:
- *   • order=viewCount  → surfaces the highest-raw-view videos (viral content)
- *   • order=relevance  → surfaces niche-specialist creators whose titles match
- *                        the keywords but don't win on raw view count
- *                        (e.g. Jeff Su for AI productivity)
+ * Search strategy — each keyword gets its own search, run twice in parallel:
+ *   • order=viewCount  → surfaces highest-raw-view videos (viral/broad content)
+ *   • order=relevance  → surfaces niche-specialist creators
  *
- * A niche with 6 keywords produces 2 chunks × 2 orders × 50 = up to 200 raw
- * candidates before deduplication, giving quality filters enough to work with.
+ * WHY individual queries (not OR-grouped chunks):
+ *   Searching "ChatGPT OR AI tools OR Claude AI" dilutes relevance signals —
+ *   YouTube tries to match all three terms, so a focused video like
+ *   "The Only AI Tools You Need" gets buried behind ChatGPT/Claude AI results.
+ *   Searching "AI tools" alone gives YouTube a single focused signal, pushing
+ *   niche-specific quality content into the top 50.
  *
- * Pipeline:
- *  • Split keywords into chunks of 3 → parallel searches (viewCount + relevance)
- *  • Deduplicate IDs across all searches
- *  • Fetch full video details (includes defaultAudioLanguage for language check)
- *  • Run passesQualityFilters:
- *      - English-only (lang tag + Unicode script detection)
- *      - ≥ 5 000 views
- *      - No negative title keywords (music, movies, non-English language markers)
- *  • Fetch channel stats only for surviving videos (saves API quota)
+ * A niche with 5 keywords → 5 × 2 orders × 50 results = 500 raw candidates
+ * before dedup. After dedup (~60% unique) = ~300. Quality filters then cut
+ * to the best 30-60 English long-form videos.
  */
 export async function fetchNicheVideos(opts: {
   keywords: string[];
-  maxResults?: number;       // pre-filter candidate pool cap (default 150)
+  maxResults?: number;
   publishedAfterDays?: number;
 }) {
-  const { keywords, maxResults = 150, publishedAfterDays = 90 } = opts;
+  const { keywords, maxResults = 300, publishedAfterDays = 180 } = opts;
 
-  // ── Build query chunks: one search per group of 3 keywords ─────────────────
-  const queryChunks: string[][] = [];
-  for (let i = 0; i < keywords.length; i += 3) {
-    queryChunks.push(keywords.slice(i, i + 3));
-  }
-
-  // ── Parallel searches: viewCount + relevance for each chunk ────────────────
-  // viewCount  → finds the most-watched videos (broad viral content)
-  // relevance  → finds niche-specialist creators who don't win on raw view count
-  // allSettled ensures one failed search doesn't abort the whole batch
+  // ── One focused search per keyword, two orderings each ─────────────────────
+  // Individual queries give YouTube a clean relevance signal per topic,
+  // surfacing niche creators that OR-grouped queries bury.
   const searchJobs = [
-    ...queryChunks.map((chunk) =>
-      searchVideos({ keywords: chunk, maxResults: 50, publishedAfterDays, order: 'viewCount' })
+    ...keywords.map((kw) =>
+      searchVideos({ keywords: [kw], maxResults: 50, publishedAfterDays, order: 'viewCount' })
     ),
-    ...queryChunks.map((chunk) =>
-      searchVideos({ keywords: chunk, maxResults: 50, publishedAfterDays, order: 'relevance' })
+    ...keywords.map((kw) =>
+      searchVideos({ keywords: [kw], maxResults: 50, publishedAfterDays, order: 'relevance' })
     ),
   ];
   const searchResults = await Promise.allSettled(searchJobs);
