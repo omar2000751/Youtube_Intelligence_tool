@@ -4,25 +4,26 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 263.4 70% 50.4%;
+    /* Sandcastles-inspired dark navy + electric blue */
+    --background: 219 50% 7%;
+    --foreground: 210 40% 96%;
+    --card: 218 48% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 218 48% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 229 100% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 218 42% 17%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 218 42% 14%;
+    --muted-foreground: 215 20% 52%;
+    --accent: 218 42% 17%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 218 38% 19%;
+    --input: 218 42% 17%;
+    --ring: 229 100% 65%;
     --radius: 0.75rem;
   }
 }
@@ -34,15 +35,39 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer utilities {
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-purple-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400;
   }
 
-  .card-glow {
-    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15), 0 4px 24px -4px rgba(139, 92, 246, 0.08);
+  /* Radial blue glow from top — Sandcastles hero effect */
+  .hero-glow {
+    background: radial-gradient(ellipse 100% 55% at 50% -5%, rgba(77, 101, 255, 0.18) 0%, transparent 70%);
+  }
+
+  /* Electric blue border glow for highlighted cards */
+  .electric-glow {
+    box-shadow: 0 0 0 1px rgba(77, 101, 255, 0.3), 0 4px 24px rgba(77, 101, 255, 0.12);
+  }
+
+  /* Hover effect — blue border + soft glow */
+  .card-electric-hover {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-electric-hover:hover {
+    border-color: rgba(77, 101, 255, 0.4);
+    box-shadow: 0 0 0 1px rgba(77, 101, 255, 0.15), 0 8px 32px rgba(77, 101, 255, 0.08);
+  }
+
+  /* Shimmer skeleton loader */
+  .shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
   }
 }

@@ -19,13 +19,11 @@ import { TrendDetail } from '@/components/trends/TrendDetail';
 import { BriefDisplay } from '@/components/briefs/BriefDisplay';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { cn, getErrorMessage } from '@/lib/utils';
 
 type Panel = 'trend' | 'brief' | null;
 
 export default function DashboardPage() {
-  // State
   const [niches, setNiches] = useState<Niche[]>([]);
   const [selectedNiche, setSelectedNiche] = useState<Niche | null>(null);
   const [trends, setTrends] = useState<Trend[]>([]);
@@ -47,7 +45,6 @@ export default function DashboardPage() {
         const json = await res.json();
         if (json.error) throw new Error(getErrorMessage(json.error));
         setNiches(json.data ?? []);
-        // Auto-select first niche
         if (json.data?.length > 0) setSelectedNiche(json.data[0]);
       } catch (err) {
         toast.error(getErrorMessage(err) || 'Failed to load niches');
@@ -58,7 +55,6 @@ export default function DashboardPage() {
     loadNiches();
   }, []);
 
-  // Load trends when niche changes
   const loadTrends = useCallback(async (nicheId: string) => {
     setLoadingTrends(true);
     setSelectedTrend(null);
@@ -80,7 +76,6 @@ export default function DashboardPage() {
     if (selectedNiche) loadTrends(selectedNiche.id);
   }, [selectedNiche, loadTrends]);
 
-  // Refresh: trigger YouTube + Twitter fetch
   async function handleRefresh() {
     if (!selectedNiche) return;
     setRefreshing(true);
@@ -102,7 +97,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Generate brief for a trend
   async function handleGenerateBrief(trend: Trend) {
     setGeneratingBriefFor(trend.id);
     const toastId = toast.loading('Claude is generating your video brief...');
@@ -135,27 +129,40 @@ export default function DashboardPage() {
   }
 
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
+  const highOpportunityCount = trends.filter((t) => t.opportunity_score >= 80).length;
+  const trackedVideoCount = trends.reduce((s, t) => s + (t.related_videos?.length ?? 0), 0);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+
       {/* ===== Sidebar ===== */}
-      <aside className="w-64 flex-shrink-0 border-r bg-card flex flex-col">
+      <aside
+        className="w-64 flex-shrink-0 border-r border-border flex flex-col"
+        style={{ background: 'hsl(218, 48%, 9%)' }}
+      >
         {/* Logo */}
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
+        <div className="px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div
+              className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'rgba(77, 101, 255, 0.15)',
+                border: '1px solid rgba(77, 101, 255, 0.3)',
+                boxShadow: '0 0 16px rgba(77, 101, 255, 0.15)',
+              }}
+            >
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h1 className="text-sm font-bold">TrendIQ</h1>
-              <p className="text-[10px] text-muted-foreground">YouTube Intelligence</p>
+              <h1 className="text-sm font-bold tracking-tight gradient-text">TrendIQ</h1>
+              <p className="text-[10px] text-muted-foreground mt-0.5">YouTube Intelligence</p>
             </div>
           </div>
         </div>
 
-        {/* Nav */}
-        <div className="p-3 border-b">
-          <nav className="space-y-1">
+        {/* Nav links */}
+        <div className="px-3 py-3 border-b border-border">
+          <nav className="space-y-0.5">
             {[
               { icon: BarChart3, label: 'Dashboard', active: true },
               { icon: FileText, label: 'My Briefs', active: false },
@@ -165,8 +172,8 @@ export default function DashboardPage() {
                 className={cn(
                   'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                   item.active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -177,11 +184,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Niche selector */}
-        <ScrollArea className="flex-1 p-3">
+        <ScrollArea className="flex-1 px-3 py-3">
           {loadingNiches ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-10 bg-muted/50 rounded-lg animate-pulse" />
+                <div key={i} className="h-9 bg-muted/30 rounded-lg shimmer" />
               ))}
             </div>
           ) : (
@@ -197,37 +204,45 @@ export default function DashboardPage() {
           )}
         </ScrollArea>
 
-        {/* Mock mode indicator */}
+        {/* Mock mode alert */}
         {isMockMode && (
-          <div className="p-3 border-t">
+          <div className="px-3 py-3 border-t border-border">
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
               <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
-              <span className="text-xs text-yellow-500">Mock data mode</span>
+              <span className="text-xs text-yellow-500 font-medium">Mock data mode</span>
             </div>
           </div>
         )}
       </aside>
 
       {/* ===== Main content ===== */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* Trend list */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* Sandcastles-style radial blue glow from top */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(77, 101, 255, 0.12) 0%, transparent 70%)',
+          }}
+        />
+
+        {/* Trend list panel */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
           {/* Header */}
-          <div className="p-6 pb-4 border-b flex items-start justify-between flex-shrink-0">
+          <div className="px-6 py-5 border-b border-border flex items-start justify-between flex-shrink-0">
             <div>
               {selectedNiche ? (
                 <>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2.5 mb-0.5">
                     <span
-                      className="h-3 w-3 rounded-full"
+                      className="h-3 w-3 rounded-full flex-shrink-0 ring-2 ring-offset-2 ring-offset-background"
                       style={{ backgroundColor: selectedNiche.color }}
                     />
                     <h2 className="text-xl font-bold">{selectedNiche.name}</h2>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground pl-5">
                     {loadingTrends
                       ? 'Loading opportunities...'
-                      : `${trends.length} trending opportunit${trends.length === 1 ? 'y' : 'ies'} detected`}
+                      : `${trends.length} trending topic${trends.length === 1 ? '' : 's'} detected`}
                   </p>
                 </>
               ) : (
@@ -241,7 +256,7 @@ export default function DashboardPage() {
                 size="sm"
                 onClick={handleRefresh}
                 disabled={refreshing || loadingTrends}
-                className="gap-2"
+                className="gap-2 border-border hover:border-primary/40 hover:text-primary transition-colors"
               >
                 <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
                 {refreshing ? 'Refreshing...' : 'Refresh Data'}
@@ -249,25 +264,30 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Stats bar */}
+          {/* Stats strip */}
           {!loadingTrends && trends.length > 0 && (
-            <div className="px-6 py-3 border-b flex items-center gap-6 text-sm flex-shrink-0">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Zap className="h-4 w-4 text-yellow-500" />
-                <span>
-                  <strong className="text-foreground">
-                    {trends.filter((t) => t.opportunity_score >= 80).length}
-                  </strong>{' '}
+            <div className="px-6 py-2.5 border-b border-border flex items-center gap-5 flex-shrink-0">
+              <div className="flex items-center gap-1.5 text-xs">
+                <Zap className="h-3.5 w-3.5 text-primary" />
+                <span className="text-muted-foreground">
+                  <strong className="text-foreground font-bold">{highOpportunityCount}</strong>{' '}
                   high opportunity
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Youtube className="h-4 w-4 text-red-500" />
-                <span>
-                  <strong className="text-foreground">
-                    {trends.reduce((s, t) => s + (t.related_videos?.length ?? 0), 0)}
-                  </strong>{' '}
+              <div className="h-3.5 w-px bg-border" />
+              <div className="flex items-center gap-1.5 text-xs">
+                <Youtube className="h-3.5 w-3.5 text-red-400" />
+                <span className="text-muted-foreground">
+                  <strong className="text-foreground font-bold">{trackedVideoCount}</strong>{' '}
                   tracked videos
+                </span>
+              </div>
+              <div className="h-3.5 w-px bg-border" />
+              <div className="flex items-center gap-1.5 text-xs">
+                <TrendingUp className="h-3.5 w-3.5 text-green-400" />
+                <span className="text-muted-foreground">
+                  <strong className="text-foreground font-bold">{trends.length}</strong>{' '}
+                  trend{trends.length !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>
@@ -275,40 +295,61 @@ export default function DashboardPage() {
 
           {/* Trend list */}
           <ScrollArea className="flex-1">
-            <div className="p-6 space-y-3">
+            <div className="p-5 space-y-3">
+
+              {/* Empty: no niche selected */}
               {!selectedNiche && (
-                <div className="text-center py-20 text-muted-foreground">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="font-medium">Select a niche to see trending opportunities</p>
+                <div className="text-center py-24 text-muted-foreground">
+                  <div
+                    className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                    style={{ background: 'rgba(77, 101, 255, 0.1)', border: '1px solid rgba(77, 101, 255, 0.2)' }}
+                  >
+                    <TrendingUp className="h-7 w-7 text-primary/60" />
+                  </div>
+                  <p className="font-semibold text-foreground mb-1">Select a niche to begin</p>
+                  <p className="text-sm">Choose from your niches in the sidebar</p>
                 </div>
               )}
 
+              {/* Loading skeletons */}
               {selectedNiche && loadingTrends && (
                 <div className="space-y-3">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-36 bg-muted/30 rounded-xl animate-pulse" />
+                    <div key={i} className="h-28 rounded-xl border border-border bg-card shimmer" />
                   ))}
                 </div>
               )}
 
+              {/* Empty: no trends yet */}
               {selectedNiche && !loadingTrends && trends.length === 0 && (
-                <div className="text-center py-20 text-muted-foreground">
-                  <RefreshCw className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="font-medium mb-2">No trends yet for this niche</p>
-                  <p className="text-sm mb-4">Click "Refresh Data" to fetch the latest from YouTube</p>
-                  <Button onClick={handleRefresh} disabled={refreshing}>
-                    <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
+                <div className="text-center py-24 text-muted-foreground">
+                  <div
+                    className="h-16 w-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                    style={{ background: 'rgba(77, 101, 255, 0.1)', border: '1px solid rgba(77, 101, 255, 0.2)' }}
+                  >
+                    <RefreshCw className="h-7 w-7 text-primary/60" />
+                  </div>
+                  <p className="font-semibold text-foreground mb-1">No trends yet</p>
+                  <p className="text-sm mb-5">Fetch the latest trending videos from YouTube</p>
+                  <Button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="gap-2 bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(77,101,255,0.2)]"
+                  >
+                    <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
                     Fetch Trends Now
                   </Button>
                 </div>
               )}
 
+              {/* Trend cards */}
               {!loadingTrends &&
                 trends.map((trend, i) => (
                   <TrendCard
                     key={trend.id}
                     trend={trend}
                     rank={i + 1}
+                    isSelected={selectedTrend?.id === trend.id}
                     onClick={() => handleTrendClick(trend)}
                     onGenerateBrief={() => handleGenerateBrief(trend)}
                     isGenerating={generatingBriefFor === trend.id}
@@ -320,7 +361,10 @@ export default function DashboardPage() {
 
         {/* ===== Right panel: Trend detail or Brief ===== */}
         {activePanel && (
-          <div className="w-[460px] flex-shrink-0 border-l bg-card flex flex-col overflow-hidden">
+          <div
+            className="w-[460px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden"
+            style={{ background: 'hsl(218, 48%, 9%)' }}
+          >
             {activePanel === 'trend' && selectedTrend && (
               <TrendDetail
                 trend={selectedTrend}
@@ -332,7 +376,7 @@ export default function DashboardPage() {
 
             {activePanel === 'brief' && activeBrief && (
               <ScrollArea className="flex-1">
-                <div className="p-6">
+                <div className="p-5">
                   <BriefDisplay
                     brief={activeBrief}
                     onClose={() => setActivePanel(null)}

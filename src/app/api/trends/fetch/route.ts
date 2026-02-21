@@ -15,6 +15,23 @@ import { computeOpportunityScore } from '@/lib/velocity';
 import { extractCoreTopic, identifyTrendTopics } from '@/lib/anthropic';
 import { Niche } from '@/types';
 
+/**
+ * Score how well a video's core topic matches a trend topic.
+ * Returns 0–4: 4 = exact match, 3 = full containment, 0–1 = word overlap ratio.
+ */
+function topicMatchScore(coreTopic: string | null, trendTopic: string): number {
+  if (!coreTopic) return 0;
+  const vt = coreTopic.toLowerCase().trim();
+  const tt = trendTopic.toLowerCase().trim();
+  if (vt === tt) return 4;
+  if (vt.includes(tt) || tt.includes(vt)) return 3;
+  const vWords = new Set(vt.split(/\W+/).filter((w) => w.length > 2));
+  const tWords = tt.split(/\W+/).filter((w) => w.length > 2);
+  if (tWords.length === 0) return 0;
+  const shared = tWords.filter((w) => vWords.has(w)).length;
+  return shared / tWords.length;
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { niche_id } = body;
@@ -167,28 +184,35 @@ export async function POST(request: NextRequest) {
 
     const stored: StoredVideo[] = (storedVideos ?? []) as StoredVideo[];
 
-    // 11. Build and upsert trends
-    const trendsToInsert = trendTopics.map((tt) => {
-      const relatedVideoIds = stored
-        .filter(
-          (v: StoredVideo) =>
-            v.core_topic?.toLowerCase().includes(tt.topic.toLowerCase().split(' ')[0]) ||
-            tt.topic.toLowerCase().includes((v.core_topic ?? '').toLowerCase().split(' ')[0])
-        )
-        .slice(0, 5)
-        .map((v: StoredVideo) => v.id);
-
-      const avgYoutubeVelocity =
-        relatedVideoIds.length > 0
-          ? stored
-              .filter((v: StoredVideo) => relatedVideoIds.includes(v.id))
-              .reduce((s, v) => s + v.velocity_score, 0) / relatedVideoIds.length
-          : 50;
-
-      const opportunityScore = computeOpportunityScore({
-        youtubeMomentum: avgYoutubeVelocity,
+    // 11. Build and upsert trends — deduplicate so each video belongs to one trend only
+    type ScoredPair = { trendIdx: number; videoId: string; score: number; velocity: number };
+    const allPairs: ScoredPair[] = [];
+    trendTopics.forEach((tt, trendIdx) => {
+      stored.forEach((v: StoredVideo) => {
+        const score = topicMatchScore(v.core_topic, tt.topic);
+        if (score > 0) allPairs.push({ trendIdx, videoId: v.id, score, velocity: v.velocity_score });
       });
+    });
+    // Greedy assignment: best-scoring pairs first; each video goes to at most one trend
+    allPairs.sort((a, b) => b.score - a.score || b.velocity - a.velocity);
+    const assignedVideoIds = new Set<string>();
+    const trendVideoMap = new Map<number, string[]>(trendTopics.map((_, i) => [i, []]));
+    for (const pair of allPairs) {
+      if (assignedVideoIds.has(pair.videoId)) continue;
+      const bucket = trendVideoMap.get(pair.trendIdx)!;
+      if (bucket.length >= 5) continue;
+      bucket.push(pair.videoId);
+      assignedVideoIds.add(pair.videoId);
+    }
 
+    const trendsToInsert = trendTopics.map((tt, idx) => {
+      const relatedVideoIds = trendVideoMap.get(idx) ?? [];
+      const relatedVideos = stored.filter((v: StoredVideo) => relatedVideoIds.includes(v.id));
+      const avgYoutubeVelocity =
+        relatedVideos.length > 0
+          ? relatedVideos.reduce((s, v) => s + v.velocity_score, 0) / relatedVideos.length
+          : 50;
+      const opportunityScore = computeOpportunityScore({ youtubeMomentum: avgYoutubeVelocity });
       return {
         topic: tt.topic,
         source: 'youtube',
