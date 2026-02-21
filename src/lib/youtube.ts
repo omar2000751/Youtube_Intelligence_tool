@@ -24,17 +24,23 @@ const MIN_VIEW_COUNT = 5_000;
  * Title substrings that indicate off-topic or non-educational content.
  * Matched case-insensitively; a single hit disqualifies the video.
  *
- * NOTE: 'song' and 'music' are intentionally excluded — they're too broad
- * and would block legitimate AI-music-tools content. Meme/short-form slop
- * is caught by the Shorts duration check and the hashtag-density check below.
+ * IMPORTANT — use SPECIFIC PHRASES, not single words:
+ *   ❌ 'film'    → also blocks "I Made a Short Film with AI Tools"
+ *   ❌ 'movie'   → also blocks "I Generated a Movie Trailer with AI in 10 Minutes"
+ *   ❌ 'trailer' → also blocks "AI Trailer Generator: Full Review"
+ *   ❌ 'episode' → also blocks "My Podcast Workflow (Episode-by-Episode Breakdown)"
+ *   ❌ 'season'  → also blocks "I Replaced My Content Season with AI Tools"
+ *
+ * Meme/short-form slop is caught by the Shorts duration check (< 60 s)
+ * and the hashtag-density check (≥ 2 hashtags), not keyword matching.
  */
 const NEGATIVE_TITLE_KEYWORDS = [
-  // Pure music/entertainment — use specific phrases, not single words
+  // Pure entertainment — specific multi-word phrases only
   'official music video', 'official video', 'official audio', 'lyrics video',
   'music video',
-  // Film / TV
-  'movie', 'film', 'trailer', 'episode', 'season',
-  // Gaming
+  'full movie',    // "Batman Full Movie" = streaming, not AI tool tutorial
+  'full episode',  // "Full Episode" = TV streaming, not AI tutorial
+  // Gaming verbs — specific enough to not catch AI game-dev content
   'gameplay', "let's play", 'walkthrough',
   // Non-English language markers commonly found in English-title videos
   'hindi', 'urdu', 'tamil', 'telugu', 'marathi', 'kannada',
@@ -357,13 +363,41 @@ export async function fetchNicheVideos(opts: {
   // ── Fetch full video details ───────────────────────────────────────────────
   const allVideos = await getVideoDetails(allIds);
 
-  // ── Quality filters ────────────────────────────────────────────────────────
-  // English-only · ≥5 k views · no negative title keywords
-  const filtered = allVideos.filter(passesQualityFilters);
+  // ── Quality filters — with per-rule breakdown for debugging ───────────────
+  let rejLang = 0, rejScript = 0, rejShorts = 0, rejHashtag = 0,
+      rejViews = 0, rejKeyword = 0;
+
+  const filtered = allVideos.filter((v) => {
+    const title = v.snippet.title;
+    const lang = v.snippet.defaultAudioLanguage ?? v.snippet.defaultLanguage ?? '';
+    if (lang && !lang.startsWith('en'))                                  { rejLang++;    return false; }
+    if (NON_LATIN_SCRIPT_RE.test(title))                                 { rejScript++;  return false; }
+    const secs = parseIsoDuration(v.contentDetails?.duration ?? '');
+    if (secs > 0 && secs < 60)                                           { rejShorts++;  return false; }
+    if ((title.match(/#\w+/g) ?? []).length >= 2)                        { rejHashtag++; return false; }
+    if (parseInt(v.statistics.viewCount ?? '0', 10) < MIN_VIEW_COUNT)    { rejViews++;   return false; }
+    if (NEGATIVE_TITLE_KEYWORDS.some(kw => title.toLowerCase().includes(kw))) { rejKeyword++; return false; }
+    return true;
+  });
+
+  const filterStats = {
+    raw_search_ids: allIds.length,
+    raw_videos_fetched: allVideos.length,
+    passed: filtered.length,
+    rejected: {
+      lang_tag: rejLang,
+      non_latin_script: rejScript,
+      shorts: rejShorts,
+      hashtag_spam: rejHashtag,
+      low_views: rejViews,
+      negative_keyword: rejKeyword,
+    },
+  };
+  console.log('[YouTube filterStats]', JSON.stringify(filterStats));
 
   // ── Channel stats — only for videos that passed filters (saves quota) ──────
   const channelIds = filtered.map((v) => v.snippet.channelId);
   const channelStats = await getChannelStats(channelIds);
 
-  return { videos: filtered, channelStats };
+  return { videos: filtered, channelStats, filterStats };
 }

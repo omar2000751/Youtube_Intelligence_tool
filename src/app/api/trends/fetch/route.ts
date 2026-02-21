@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const nicheData = niche as Niche;
 
     // 2. Fetch YouTube videos
-    const { videos, channelStats } = await fetchNicheVideos({
+    const { videos, channelStats, filterStats } = await fetchNicheVideos({
       keywords: nicheData.keywords,
       maxResults: 150,    // pre-filter candidate pool; quality filters reduce this further
       publishedAfterDays: 90, // 90 days captures popular videos that are 1-3 months old
@@ -208,6 +208,7 @@ export async function POST(request: NextRequest) {
         videos_found: finalVideos.length,
         trends_identified: trendsToInsert.length,
         message: `Refresh complete: ${finalVideos.length} videos classified into ${trendsToInsert.length} content pillars`,
+        filter_stats: filterStats,  // visible in network tab for debugging
       },
       error: null,
     });
