@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const { videos, channelStats } = await fetchNicheVideos({
       keywords: nicheData.keywords,
       maxResults: 150,    // pre-filter candidate pool; quality filters reduce this further
-      publishedAfterDays: 30,
+      publishedAfterDays: 90, // 90 days captures popular videos that are 1-3 months old
     });
 
     // 3. Build raw records

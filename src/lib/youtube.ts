@@ -268,49 +268,51 @@ export async function extractCommentRequests(
 /**
  * Full pipeline: broad multi-search → deduplicate → enrich → quality filter.
  *
- * To get 100-200 quality candidates (up from the old 50-video hard cap):
- *  • Split the niche's keywords into chunks of 3 → one parallel search per chunk.
- *    A niche with 6 keywords produces 2 chunks × 50 = up to 100 raw candidates.
- *  • Always append a broad AI/LLM catch-all search for general coverage.
- *  • Deduplicate across all searches.
- *  • Fetch full video details (includes defaultAudioLanguage for language check).
+ * Search strategy — each keyword chunk is searched twice in parallel:
+ *   • order=viewCount  → surfaces the highest-raw-view videos (viral content)
+ *   • order=relevance  → surfaces niche-specialist creators whose titles match
+ *                        the keywords but don't win on raw view count
+ *                        (e.g. Jeff Su for AI productivity)
+ *
+ * A niche with 6 keywords produces 2 chunks × 2 orders × 50 = up to 200 raw
+ * candidates before deduplication, giving quality filters enough to work with.
+ *
+ * Pipeline:
+ *  • Split keywords into chunks of 3 → parallel searches (viewCount + relevance)
+ *  • Deduplicate IDs across all searches
+ *  • Fetch full video details (includes defaultAudioLanguage for language check)
  *  • Run passesQualityFilters:
- *      - English-only (reject if lang tag is set and non-English)
+ *      - English-only (lang tag + Unicode script detection)
  *      - ≥ 5 000 views
  *      - No negative title keywords (music, movies, non-English language markers)
- *  • Fetch channel stats only for surviving videos (saves API quota).
+ *  • Fetch channel stats only for surviving videos (saves API quota)
  */
 export async function fetchNicheVideos(opts: {
   keywords: string[];
   maxResults?: number;       // pre-filter candidate pool cap (default 150)
   publishedAfterDays?: number;
 }) {
-  const { keywords, maxResults = 150, publishedAfterDays = 30 } = opts;
+  const { keywords, maxResults = 150, publishedAfterDays = 90 } = opts;
 
   // ── Build query chunks: one search per group of 3 keywords ─────────────────
   const queryChunks: string[][] = [];
   for (let i = 0; i < keywords.length; i += 3) {
     queryChunks.push(keywords.slice(i, i + 3));
   }
-  // Always add a broad AI/LLM catch-all so sparse-keyword niches get good coverage
-  queryChunks.push([
-    'AI automation workflow',
-    'ChatGPT tutorial',
-    'artificial intelligence tools',
-  ]);
 
-  // ── Parallel searches (50 results each — YouTube API hard cap per request) ──
+  // ── Parallel searches: viewCount + relevance for each chunk ────────────────
+  // viewCount  → finds the most-watched videos (broad viral content)
+  // relevance  → finds niche-specialist creators who don't win on raw view count
   // allSettled ensures one failed search doesn't abort the whole batch
-  const searchResults = await Promise.allSettled(
-    queryChunks.map((chunk) =>
-      searchVideos({
-        keywords: chunk,
-        maxResults: 50,
-        publishedAfterDays,
-        order: 'viewCount',
-      })
-    )
-  );
+  const searchJobs = [
+    ...queryChunks.map((chunk) =>
+      searchVideos({ keywords: chunk, maxResults: 50, publishedAfterDays, order: 'viewCount' })
+    ),
+    ...queryChunks.map((chunk) =>
+      searchVideos({ keywords: chunk, maxResults: 50, publishedAfterDays, order: 'relevance' })
+    ),
+  ];
+  const searchResults = await Promise.allSettled(searchJobs);
 
   // ── Deduplicate IDs across all searches ────────────────────────────────────
   // Buffer at 2× target so quality filters have enough to work with
