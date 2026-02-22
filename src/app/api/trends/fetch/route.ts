@@ -66,11 +66,17 @@ export async function POST(request: NextRequest) {
       // defaults: maxResults=300, publishedAfterDays=180
     });
 
-    // Strip null bytes and ASCII control characters (except \t \n \r) from strings.
-    // YouTube text fields can contain \u0000 which causes PostgreSQL to reject the
-    // entire upsert with "invalid input syntax for type json" via PostgREST.
+    // Strip null bytes, ASCII control characters, and lone Unicode surrogates from strings.
+    // YouTube text fields can contain \u0000 (null bytes) and lone surrogates (e.g. when
+    // .slice() cuts across a surrogate pair at an emoji boundary). PostgreSQL's JSON parser
+    // rejects both with "invalid input syntax for type json" via PostgREST.
+    // \p{Surrogate} with the u-flag matches only unpaired surrogates, preserving valid emoji.
     const clean = (s: string | null | undefined): string | null =>
-      s ? s.replace(/[\u0000\x01-\x08\x0b\x0c\x0e-\x1f]/g, '') : null;
+      s
+        ? s
+            .replace(/[\u0000\x01-\x08\x0b\x0c\x0e-\x1f]/g, '') // null bytes & control chars
+            .replace(/\p{Surrogate}/gu, '')                        // lone surrogates
+        : null;
 
     // 3. Build raw records
     const rawVideos = videos.map((v) => ({
