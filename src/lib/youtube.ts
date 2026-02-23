@@ -335,6 +335,16 @@ export async function fetchNicheVideos(opts: {
   ];
   const searchResults = await Promise.allSettled(searchJobs);
 
+  // If every single search failed, surface the real API error instead of
+  // silently returning 0 videos. allSettled() swallows individual rejections,
+  // so without this check a bad API key or quota error looks like "0 videos found".
+  const rejectedResults = searchResults.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (rejectedResults.length === searchResults.length) {
+    throw new Error(
+      `All YouTube searches failed: ${rejectedResults[0]?.reason?.message ?? 'unknown error'}`
+    );
+  }
+
   // ── Deduplicate IDs across all searches ────────────────────────────────────
   // Buffer at 2× target so quality filters have enough to work with
   const seen = new Set<string>();
