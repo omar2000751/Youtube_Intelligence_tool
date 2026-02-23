@@ -38,8 +38,14 @@ const NEGATIVE_TITLE_KEYWORDS = [
   // Pure entertainment — specific multi-word phrases only
   'official music video', 'official video', 'official audio', 'lyrics video',
   'music video',
-  'full movie',    // "Batman Full Movie" = streaming, not AI tool tutorial
-  'full episode',  // "Full Episode" = TV streaming, not AI tutorial
+  'full movie',        // "Batman Full Movie" = streaming, not AI tool tutorial
+  'full episode',      // "Full Episode" = TV streaming, not AI tutorial
+  'full documentary',  // "The Thinking Game | Full documentary" = film, not tutorial
+  'official selection', // Tribeca / film festival official selections
+  'film festival',     // film festival submissions
+  // Viral/satisfying content — AI-generated visuals, not AI education
+  'oddly satisfying',
+  'asmr',
   // Gaming verbs — specific enough to not catch AI game-dev content
   'gameplay', "let's play", 'walkthrough',
   // Non-English language markers commonly found in English-title videos
@@ -93,10 +99,11 @@ function passesQualityFilters(video: YouTubeVideoItem): boolean {
   const durationSecs = parseIsoDuration(video.contentDetails?.duration ?? '');
   if (durationSecs > 0 && durationSecs < 60) return false;
 
-  // 4. Hashtag spam — meme/slop content stuffs multiple hashtags into titles
-  //    e.g. "#memes #ai #grox #chatgpt" — one hashtag (a topic tag) is fine
+  // 4. Hashtag spam — meme/slop content stuffs many hashtags into titles
+  //    e.g. "#memes #ai #viral #grox #chatgpt" — 1-3 hashtags (topic tags) are fine,
+  //    4+ is a clear spam signal
   const hashtagCount = (title.match(/#\w+/g) ?? []).length;
-  if (hashtagCount >= 2) return false;
+  if (hashtagCount >= 4) return false;
 
   // 5. View count floor
   const views = parseInt(video.statistics.viewCount ?? '0', 10);
@@ -334,6 +341,16 @@ export async function fetchNicheVideos(opts: {
   ];
   const searchResults = await Promise.allSettled(searchJobs);
 
+  // If every single search failed, surface the real API error instead of
+  // silently returning 0 videos. allSettled() swallows individual rejections,
+  // so without this check a bad API key or quota error looks like "0 videos found".
+  const rejectedResults = searchResults.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (rejectedResults.length === searchResults.length) {
+    throw new Error(
+      `All YouTube searches failed: ${rejectedResults[0]?.reason?.message ?? 'unknown error'}`
+    );
+  }
+
   // ── Deduplicate IDs across all searches ────────────────────────────────────
   // Buffer at 2× target so quality filters have enough to work with
   const seen = new Set<string>();
@@ -363,7 +380,7 @@ export async function fetchNicheVideos(opts: {
     if (NON_LATIN_SCRIPT_RE.test(title))                                 { rejScript++;  return false; }
     const secs = parseIsoDuration(v.contentDetails?.duration ?? '');
     if (secs > 0 && secs < 60)                                           { rejShorts++;  return false; }
-    if ((title.match(/#\w+/g) ?? []).length >= 2)                        { rejHashtag++; return false; }
+    if ((title.match(/#\w+/g) ?? []).length >= 4)                        { rejHashtag++; return false; }
     if (parseInt(v.statistics.viewCount ?? '0', 10) < MIN_VIEW_COUNT)    { rejViews++;   return false; }
     if (NEGATIVE_TITLE_KEYWORDS.some(kw => title.toLowerCase().includes(kw))) { rejKeyword++; return false; }
     return true;

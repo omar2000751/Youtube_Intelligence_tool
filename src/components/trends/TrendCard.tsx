@@ -115,7 +115,7 @@ export function TrendCard({
 
       {/* ── Video title list ── */}
       <div className="px-4 py-3 space-y-1.5">
-        {videos.slice(0, 3).map((v) => (
+        {videos.slice(0, 5).map((v) => (
           <div key={v.id} className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
             <TrendingUp className={cn('h-3 w-3 flex-shrink-0', meta.textClass)} />
             <span className="truncate flex-1 text-foreground/80">{v.title}</span>

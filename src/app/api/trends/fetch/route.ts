@@ -66,11 +66,17 @@ export async function POST(request: NextRequest) {
       // defaults: maxResults=300, publishedAfterDays=180
     });
 
-    // Strip null bytes and ASCII control characters (except \t \n \r) from strings.
-    // YouTube text fields can contain \u0000 which causes PostgreSQL to reject the
-    // entire upsert with "invalid input syntax for type json" via PostgREST.
+    // Strip null bytes, ASCII control characters, and lone Unicode surrogates from strings.
+    // YouTube text fields can contain \u0000 (null bytes) and lone surrogates (e.g. when
+    // .slice() cuts across a surrogate pair at an emoji boundary). PostgreSQL's JSON parser
+    // rejects both with "invalid input syntax for type json" via PostgREST.
+    // \p{Surrogate} with the u-flag matches only unpaired surrogates, preserving valid emoji.
     const clean = (s: string | null | undefined): string | null =>
-      s ? s.replace(/[\u0000\x01-\x08\x0b\x0c\x0e-\x1f]/g, '') : null;
+      s
+        ? s
+            .replace(/[\u0000\x01-\x08\x0b\x0c\x0e-\x1f]/g, '') // null bytes & control chars
+            .replace(/\p{Surrogate}/gu, '')                        // lone surrogates
+        : null;
 
     // 3. Build raw records
     const rawVideos = videos.map((v) => ({
@@ -104,10 +110,10 @@ export async function POST(request: NextRequest) {
     }));
     const scored = scoreVideos(rawVideosForScoring);
 
-    // 5. Extract core topics for top 10 via AI
-    const top10 = [...scored].sort((a, b) => b.velocity_score - a.velocity_score).slice(0, 10);
+    // 5. Extract core topics for top 20 via AI
+    const top20 = [...scored].sort((a, b) => b.velocity_score - a.velocity_score).slice(0, 20);
     const topicsResults = await Promise.all(
-      top10.map(async (v) => {
+      top20.map(async (v) => {
         try {
           const topic = await extractCoreTopic({ title: v.title, description: v.description ?? '' });
           return { youtube_id: v.youtube_id, core_topic: topic };
@@ -118,9 +124,9 @@ export async function POST(request: NextRequest) {
     );
     const topicMap = Object.fromEntries(topicsResults.map((r) => [r.youtube_id, r.core_topic]));
 
-    // 6. Comment requests for top 5
+    // 6. Comment requests for top 10
     const commentResults = await Promise.all(
-      top10.slice(0, 5).map(async (v) => {
+      top20.slice(0, 10).map(async (v) => {
         const requests = await extractCommentRequests(v.youtube_id);
         return { youtube_id: v.youtube_id, comment_requests: requests };
       })
@@ -174,10 +180,10 @@ export async function POST(request: NextRequest) {
     const trendsToInsert = ALL_PILLARS
       .filter((p) => (pillarBuckets.get(p)?.length ?? 0) > 0)
       .map((pillar) => {
-        // Top 8 videos per pillar, sorted by velocity
+        // Top 20 videos per pillar, sorted by velocity
         const pillarVideos = (pillarBuckets.get(pillar) ?? [])
           .sort((a, b) => b.velocity_score - a.velocity_score)
-          .slice(0, 8);
+          .slice(0, 20);
         const relatedVideoIds = pillarVideos.map((v) => v.id);
         const avgVelocity =
           pillarVideos.reduce((s, v) => s + v.velocity_score, 0) / pillarVideos.length;

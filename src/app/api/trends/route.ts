@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
           .select('*')
           .in('id', ids)
           .order('velocity_score', { ascending: false })
-          .limit(5);
+          .limit(20);
 
         return { ...trend, related_videos: videos ?? [] };
       })
