@@ -83,6 +83,7 @@ export const ALL_PILLARS: Pillar[] = ['Tutorials', 'Reactions', 'Experiments', '
 
 export interface PillarMeta {
   emoji: string;
+  displayName: string; // human-readable label shown in UI (replaces raw Pillar key for display)
   tagline: string;
   accent: string;      // hex for inline styles
   textClass: string;   // tailwind text
@@ -94,6 +95,7 @@ export interface PillarMeta {
 export const PILLAR_META: Record<Pillar, PillarMeta> = {
   Tutorials: {
     emoji: '🎓',
+    displayName: 'Tutorials',
     tagline: 'How-to guides, step-by-step workflows & build tutorials',
     accent: '#4D65FF',
     textClass: 'text-blue-400',
@@ -103,6 +105,7 @@ export const PILLAR_META: Record<Pillar, PillarMeta> = {
   },
   Reactions: {
     emoji: '🔥',
+    displayName: 'Reviews & Reactions',
     tagline: 'Reviews, comparisons & first impressions',
     accent: '#f97316',
     textClass: 'text-orange-400',
@@ -112,7 +115,8 @@ export const PILLAR_META: Record<Pillar, PillarMeta> = {
   },
   Experiments: {
     emoji: '🧪',
-    tagline: 'Testing new tools, building things & experiments',
+    displayName: 'Experiments',
+    tagline: 'Testing new tools, building things & hands-on experiments',
     accent: '#a855f7',
     textClass: 'text-purple-400',
     bgClass: 'bg-purple-500/10',
@@ -121,7 +125,8 @@ export const PILLAR_META: Record<Pillar, PillarMeta> = {
   },
   Other: {
     emoji: '📺',
-    tagline: 'General AI & automation content',
+    displayName: 'Trending Now',
+    tagline: 'High-momentum content that does not fit a single format',
     accent: '#94a3b8',
     textClass: 'text-slate-400',
     bgClass: 'bg-slate-500/10',

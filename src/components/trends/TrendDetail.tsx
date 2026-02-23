@@ -1,6 +1,17 @@
 'use client';
 
-import { ExternalLink, Zap, X, TrendingUp, MessageSquare, Eye } from 'lucide-react';
+import {
+  ExternalLink,
+  Zap,
+  X,
+  TrendingUp,
+  MessageSquare,
+  Eye,
+  BookOpen,
+  Flame,
+  FlaskConical,
+  BarChart3,
+} from 'lucide-react';
 import Image from 'next/image';
 import { Trend } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -8,6 +19,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn, formatNumber, formatRelativeTime } from '@/lib/utils';
 import { velocityLabel } from '@/lib/velocity';
 import { PILLAR_META, Pillar } from '@/lib/pillars';
+
+const PILLAR_ICONS: Record<string, React.ElementType> = {
+  Tutorials: BookOpen,
+  Reactions: Flame,
+  Experiments: FlaskConical,
+  Other: BarChart3,
+};
 
 interface TrendDetailProps {
   trend: Trend;
@@ -19,6 +37,7 @@ interface TrendDetailProps {
 export function TrendDetail({ trend, onGenerateBrief, isGenerating, onClose }: TrendDetailProps) {
   const pillar = trend.topic as Pillar;
   const meta = PILLAR_META[pillar] ?? PILLAR_META.Other;
+  const PillarIcon = PILLAR_ICONS[pillar] ?? BarChart3;
   const videos = trend.related_videos ?? [];
 
   return (
@@ -30,9 +49,17 @@ export function TrendDetail({ trend, onGenerateBrief, isGenerating, onClose }: T
         <div className="flex items-start gap-3">
           {/* Pillar identity */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl leading-none">{meta.emoji}</span>
-              <h2 className={cn('text-xl font-bold', meta.textClass)}>{pillar}</h2>
+            <div className="flex items-center gap-2.5 mb-1">
+              <div
+                className={cn(
+                  'h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 border',
+                  meta.bgClass,
+                  meta.borderClass
+                )}
+              >
+                <PillarIcon className={cn('h-4 w-4', meta.textClass)} />
+              </div>
+              <h2 className={cn('text-xl font-bold', meta.textClass)}>{meta.displayName}</h2>
             </div>
             <p className="text-sm text-muted-foreground">{meta.tagline}</p>
             <p className="text-xs text-muted-foreground/60 mt-0.5">

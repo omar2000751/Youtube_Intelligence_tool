@@ -9,6 +9,7 @@ import {
   AlertCircle,
   FileText,
   TrendingUp,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Niche, Trend, VideoBrief } from '@/types';
@@ -19,7 +20,7 @@ import { TrendDetail } from '@/components/trends/TrendDetail';
 import { BriefDisplay } from '@/components/briefs/BriefDisplay';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn, getErrorMessage } from '@/lib/utils';
+import { cn, formatNumber, getErrorMessage } from '@/lib/utils';
 
 type Panel = 'trend' | 'brief' | null;
 
@@ -130,12 +131,10 @@ export default function DashboardPage() {
 
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
   const trackedVideoCount = trends.reduce((s, t) => s + (t.related_videos?.length ?? 0), 0);
-  // Per-pillar video counts for the stats strip
-  const pillarCounts = (['Tutorials', 'Reactions', 'Experiments'] as Pillar[]).map((p) => ({
-    pillar: p,
-    meta: PILLAR_META[p],
-    count: trends.find((t) => t.topic === p)?.related_videos?.length ?? 0,
-  }));
+  const totalNicheViews = trends
+    .flatMap((t) => t.related_videos ?? [])
+    .reduce((s, v) => s + v.view_count, 0);
+  const hottestTrend = trends.slice().sort((a, b) => b.momentum_score - a.momentum_score)[0];
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -248,7 +247,7 @@ export default function DashboardPage() {
                     {loadingTrends
                       ? 'Classifying videos into content pillars...'
                       : trends.length > 0
-                        ? `${trackedVideoCount} videos across ${trends.length} content pillar${trends.length !== 1 ? 's' : ''}`
+                        ? `${formatNumber(totalNicheViews)} total views · ${trackedVideoCount} videos across ${trends.length} pillar${trends.length !== 1 ? 's' : ''}`
                         : 'No data yet — hit Refresh to scan YouTube'}
                   </p>
                 </>
@@ -271,26 +270,35 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Stats strip — per-pillar video counts */}
+          {/* Stats strip — niche-level aggregate metrics */}
           {!loadingTrends && trends.length > 0 && (
             <div className="px-6 py-2.5 border-b border-border flex items-center gap-4 flex-shrink-0 overflow-x-auto">
-              {pillarCounts.map(({ pillar, meta, count }, i) => (
-                <div key={pillar} className="flex items-center gap-4 flex-shrink-0">
-                  {i > 0 && <div className="h-3.5 w-px bg-border" />}
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <span className="text-base leading-none">{meta.emoji}</span>
+              <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                <Eye className="h-3 w-3 text-muted-foreground/60" />
+                <span className="text-muted-foreground">
+                  <strong className="text-foreground">{formatNumber(totalNicheViews)}</strong>{' '}
+                  total niche views
+                </span>
+              </div>
+              {hottestTrend && (
+                <>
+                  <div className="h-3.5 w-px bg-border flex-shrink-0" />
+                  <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                    <TrendingUp className="h-3 w-3 text-green-500/70" />
                     <span className="text-muted-foreground">
-                      <strong className={meta.textClass}>{count}</strong>{' '}
-                      {pillar.toLowerCase()}
+                      Hottest format:{' '}
+                      <strong className="text-foreground">
+                        {PILLAR_META[hottestTrend.topic as Pillar]?.displayName ?? hottestTrend.topic}
+                      </strong>
                     </span>
                   </div>
-                </div>
-              ))}
+                </>
+              )}
               <div className="h-3.5 w-px bg-border flex-shrink-0" />
               <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
                 <Zap className="h-3 w-3 text-muted-foreground/60" />
                 <span className="text-muted-foreground">
-                  <strong className="text-foreground">{trackedVideoCount}</strong> total videos
+                  <strong className="text-foreground">{trackedVideoCount}</strong> videos tracked
                 </span>
               </div>
             </div>
