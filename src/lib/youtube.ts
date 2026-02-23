@@ -306,9 +306,7 @@ export async function extractCommentRequests(
 /**
  * Full pipeline: broad multi-search → deduplicate → enrich → quality filter.
  *
- * Search strategy — each keyword gets its own search, run twice in parallel:
- *   • order=viewCount  → surfaces highest-raw-view videos (viral/broad content)
- *   • order=relevance  → surfaces niche-specialist creators
+ * Search strategy — one relevance-ordered search per keyword, run in parallel.
  *
  * WHY individual queries (not OR-grouped chunks):
  *   Searching "ChatGPT OR AI tools OR Claude AI" dilutes relevance signals —
@@ -317,9 +315,15 @@ export async function extractCommentRequests(
  *   Searching "AI tools" alone gives YouTube a single focused signal, pushing
  *   niche-specific quality content into the top 50.
  *
- * A niche with 5 keywords → 5 × 2 orders × 50 results = 500 raw candidates
- * before dedup. After dedup (~60% unique) = ~300. Quality filters then cut
- * to the best 30-60 English long-form videos.
+ * WHY relevance only (not also viewCount):
+ *   search.list costs 100 quota units each. Running two orderings per keyword
+ *   doubled the search cost (e.g. 5 keywords × 2 = 1,000 units/refresh) and
+ *   primarily surfaced viral entertainment that our negative-keyword filters
+ *   had to reject anyway. Relevance order surfaces niche specialist creators
+ *   more reliably within the 180-day recency window.
+ *
+ * A niche with 5 keywords → 5 × 50 results = 250 raw candidates
+ * before dedup. Quality filters then cut to the best 30-60 English long-form videos.
  */
 export async function fetchNicheVideos(opts: {
   keywords: string[];
@@ -328,17 +332,12 @@ export async function fetchNicheVideos(opts: {
 }) {
   const { keywords, maxResults = 300, publishedAfterDays = 180 } = opts;
 
-  // ── One focused search per keyword, two orderings each ─────────────────────
+  // ── One focused relevance search per keyword ────────────────────────────────
   // Individual queries give YouTube a clean relevance signal per topic,
   // surfacing niche creators that OR-grouped queries bury.
-  const searchJobs = [
-    ...keywords.map((kw) =>
-      searchVideos({ keywords: [kw], maxResults: 50, publishedAfterDays, order: 'viewCount' })
-    ),
-    ...keywords.map((kw) =>
-      searchVideos({ keywords: [kw], maxResults: 50, publishedAfterDays, order: 'relevance' })
-    ),
-  ];
+  const searchJobs = keywords.map((kw) =>
+    searchVideos({ keywords: [kw], maxResults: 50, publishedAfterDays, order: 'relevance' })
+  );
   const searchResults = await Promise.allSettled(searchJobs);
 
   // If every single search failed, surface the real API error instead of

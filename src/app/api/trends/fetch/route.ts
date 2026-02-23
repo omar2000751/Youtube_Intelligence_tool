@@ -43,6 +43,33 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminSupabaseClient();
 
+  // ── Quota guard: skip YouTube API calls if data is < 24 hours old ──────────
+  // search.list costs 100 units each; default quota is 10,000/day.
+  // Without this guard, repeated "Refresh Data" clicks drain the quota fast.
+  const COOLDOWN_HOURS = 24;
+  const { data: recentLog } = await supabase
+    .from('refresh_log')
+    .select('created_at')
+    .eq('niche_id', niche_id)
+    .eq('status', 'success')
+    .gte('created_at', new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (recentLog) {
+    const lastRefresh = new Date(recentLog.created_at);
+    const ageHours = Math.round((Date.now() - lastRefresh.getTime()) / (60 * 60 * 1000));
+    const hoursLeft = COOLDOWN_HOURS - ageHours;
+    return NextResponse.json({
+      data: {
+        cached: true,
+        message: `Data is fresh — last refreshed ${ageHours}h ago. Next refresh available in ${hoursLeft}h.`,
+      },
+      error: null,
+    });
+  }
+
   const { data: logEntry } = await supabase
     .from('refresh_log')
     .insert({ niche_id, source: 'youtube', status: 'running' })
