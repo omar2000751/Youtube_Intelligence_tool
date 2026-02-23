@@ -110,10 +110,10 @@ export async function POST(request: NextRequest) {
     }));
     const scored = scoreVideos(rawVideosForScoring);
 
-    // 5. Extract core topics for top 10 via AI
-    const top10 = [...scored].sort((a, b) => b.velocity_score - a.velocity_score).slice(0, 10);
+    // 5. Extract core topics for top 20 via AI
+    const top20 = [...scored].sort((a, b) => b.velocity_score - a.velocity_score).slice(0, 20);
     const topicsResults = await Promise.all(
-      top10.map(async (v) => {
+      top20.map(async (v) => {
         try {
           const topic = await extractCoreTopic({ title: v.title, description: v.description ?? '' });
           return { youtube_id: v.youtube_id, core_topic: topic };
@@ -124,9 +124,9 @@ export async function POST(request: NextRequest) {
     );
     const topicMap = Object.fromEntries(topicsResults.map((r) => [r.youtube_id, r.core_topic]));
 
-    // 6. Comment requests for top 5
+    // 6. Comment requests for top 10
     const commentResults = await Promise.all(
-      top10.slice(0, 5).map(async (v) => {
+      top20.slice(0, 10).map(async (v) => {
         const requests = await extractCommentRequests(v.youtube_id);
         return { youtube_id: v.youtube_id, comment_requests: requests };
       })
@@ -180,10 +180,10 @@ export async function POST(request: NextRequest) {
     const trendsToInsert = ALL_PILLARS
       .filter((p) => (pillarBuckets.get(p)?.length ?? 0) > 0)
       .map((pillar) => {
-        // Top 8 videos per pillar, sorted by velocity
+        // Top 10 videos per pillar, sorted by velocity
         const pillarVideos = (pillarBuckets.get(pillar) ?? [])
           .sort((a, b) => b.velocity_score - a.velocity_score)
-          .slice(0, 8);
+          .slice(0, 10);
         const relatedVideoIds = pillarVideos.map((v) => v.id);
         const avgVelocity =
           pillarVideos.reduce((s, v) => s + v.velocity_score, 0) / pillarVideos.length;
