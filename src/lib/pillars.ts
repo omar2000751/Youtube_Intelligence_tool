@@ -10,6 +10,7 @@ export type Pillar = 'Tutorials' | 'Reactions' | 'Experiments' | 'Other';
 
 const TUTORIAL_KEYWORDS = [
   'how to',
+  'how i',       // "How I Study Machine Learning", "How I Use ChatGPT"
   'tutorial',
   'guide',
   'build',
@@ -17,10 +18,22 @@ const TUTORIAL_KEYWORDS = [
   'step-by-step',
   'step by step',
   'workflow',
+  'beginner',    // "Python for Beginners", "Beginner AI Guide"
+  'learn',       // "Learn Machine Learning", "Learn Python"
+  'course',      // "Free AI Course 2024"
+  'crash course',
+  'masterclass',
+  'explained',   // "LLMs Explained", "Machine Learning Explained"
+  'introduction',
+  'getting started',
+  'basics',
+  'fundamentals',
+  'complete guide',
 ];
 
 const REACTION_KEYWORDS = [
   'reacting',
+  'reaction',
   'review',
   ' vs ',
   'first impression',
@@ -29,6 +42,13 @@ const REACTION_KEYWORDS = [
   'gemini vs',
   'claude vs',
   'gpt-4 vs',
+  'breakdown',   // "GPT-4o Breakdown: What Changed"
+  'compared',    // "Top AI Models Compared"
+  'comparison',
+  'worth it',    // "Is Claude Pro Worth It?"
+  'honest review',
+  'ranked',
+  'which is better',
 ];
 
 const EXPERIMENT_KEYWORDS = [
@@ -36,12 +56,19 @@ const EXPERIMENT_KEYWORDS = [
   'testing',
   'experiment',
   'i built',
+  'i made',      // "I Made an AI That..."
+  'i created',
+  'i asked',     // "I Asked ChatGPT to Write My Resume"
+  'i replaced',  // "I Replaced My Team with AI"
+  'i automated',
   'what happens if',
   'what if',
   'i tested',
   'we tested',
   'i used',
   'i spent',
+  'challenge',   // "The 30-Day AI Challenge"
+  'can ai',      // "Can AI Do This?"
 ];
 
 export function classifyVideoToPillar(title: string): Pillar {

@@ -38,8 +38,14 @@ const NEGATIVE_TITLE_KEYWORDS = [
   // Pure entertainment — specific multi-word phrases only
   'official music video', 'official video', 'official audio', 'lyrics video',
   'music video',
-  'full movie',    // "Batman Full Movie" = streaming, not AI tool tutorial
-  'full episode',  // "Full Episode" = TV streaming, not AI tutorial
+  'full movie',        // "Batman Full Movie" = streaming, not AI tool tutorial
+  'full episode',      // "Full Episode" = TV streaming, not AI tutorial
+  'full documentary',  // "The Thinking Game | Full documentary" = film, not tutorial
+  'official selection', // Tribeca / film festival official selections
+  'film festival',     // film festival submissions
+  // Viral/satisfying content — AI-generated visuals, not AI education
+  'oddly satisfying',
+  'asmr',
   // Gaming verbs — specific enough to not catch AI game-dev content
   'gameplay', "let's play", 'walkthrough',
   // Non-English language markers commonly found in English-title videos
