@@ -19,6 +19,12 @@ time of the last fetch, not the current code.
 **Rule:** When changing how many video IDs get stored per pillar, always tell the user they
 need to trigger a Refresh Data for the new limits to apply.
 
+## Title-Keyword Filter Kills Legit Creators
+**Date:** 2026-02-23
+**Issue:** Added a post-search title-relevance filter requiring the video title to contain a niche keyword (e.g. "ai"). This immediately broke creator discovery — Jeff Su's "5 Gmail Shortcuts" and MITMONK's "Python Automation Tutorial" were rejected because they don't literally say "AI" in the title, even though they're core AI-productivity content.
+**Root cause:** Conflated "YouTube returned off-topic content" with "titles don't say the keyword". YouTube's search relevance already handles topical matching. Creators in a niche don't always title every video with the exact niche keyword.
+**Rule:** NEVER add a title-must-contain-keyword filter. The existing 6 gates (language, script, shorts, hashtags, views, negative keywords) are the right line of defense. If content quality is still low after those, debug with filterStats and consider expanding NEGATIVE_TITLE_KEYWORDS with specific off-topic phrases, not a positive keyword gate.
+
 ## Two Copies of the Same Filter Logic
 **Date:** 2026-02-23
 **Issue:** The hashtag threshold appears in TWO places in `youtube.ts`:
