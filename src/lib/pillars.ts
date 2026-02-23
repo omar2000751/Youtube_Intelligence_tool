@@ -8,7 +8,7 @@
 
 export type Pillar = 'Tutorials' | 'Reactions' | 'Experiments' | 'Other';
 
-const TUTORIAL_KEYWORDS = [
+export const TUTORIAL_KEYWORDS = [
   'how to',
   'how i',       // "How I Study Machine Learning", "How I Use ChatGPT"
   'tutorial',
@@ -31,7 +31,7 @@ const TUTORIAL_KEYWORDS = [
   'complete guide',
 ];
 
-const REACTION_KEYWORDS = [
+export const REACTION_KEYWORDS = [
   'reacting',
   'reaction',
   'review',
@@ -51,7 +51,7 @@ const REACTION_KEYWORDS = [
   'which is better',
 ];
 
-const EXPERIMENT_KEYWORDS = [
+export const EXPERIMENT_KEYWORDS = [
   'i tried',
   'testing',
   'experiment',

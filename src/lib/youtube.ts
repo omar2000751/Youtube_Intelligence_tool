@@ -34,7 +34,7 @@ const MIN_VIEW_COUNT = 5_000;
  * Meme/short-form slop is caught by the Shorts duration check (< 60 s)
  * and the hashtag-density check (≥ 2 hashtags), not keyword matching.
  */
-const NEGATIVE_TITLE_KEYWORDS = [
+export const NEGATIVE_TITLE_KEYWORDS = [
   // Pure entertainment — specific multi-word phrases only
   'official music video', 'official video', 'official audio', 'lyrics video',
   'music video',

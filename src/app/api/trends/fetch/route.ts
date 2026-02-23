@@ -16,6 +16,7 @@ import { fetchNicheVideos, extractCommentRequests } from '@/lib/youtube';
 import { scoreVideos, computeOpportunityScore } from '@/lib/velocity';
 import { extractCoreTopic } from '@/lib/anthropic';
 import { classifyVideoToPillar, ALL_PILLARS } from '@/lib/pillars';
+import { computeFilterHash } from '@/lib/filter-hash';
 import { Niche } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -43,13 +44,17 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminSupabaseClient();
 
-  // ── Quota guard: skip YouTube API calls if data is < 24 hours old ──────────
+  // ── Quota guard: skip YouTube API calls if data is < 24 hours old AND filters unchanged ─
   // search.list costs 100 units each; default quota is 10,000/day.
-  // Without this guard, repeated "Refresh Data" clicks drain the quota fast.
+  // Cache is invalidated automatically when any filter array changes (NEGATIVE_TITLE_KEYWORDS,
+  // TUTORIAL_KEYWORDS, etc.) — the filter hash stored with the log entry won't match the
+  // current hash, so a fresh fetch runs without manual intervention.
   const COOLDOWN_HOURS = 24;
+  const currentHash = computeFilterHash();
+
   const { data: recentLog } = await supabase
     .from('refresh_log')
-    .select('created_at')
+    .select('created_at, message')
     .eq('niche_id', niche_id)
     .eq('status', 'success')
     .gte('created_at', new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000).toISOString())
@@ -58,16 +63,26 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (recentLog) {
-    const lastRefresh = new Date(recentLog.created_at);
-    const ageHours = Math.round((Date.now() - lastRefresh.getTime()) / (60 * 60 * 1000));
-    const hoursLeft = COOLDOWN_HOURS - ageHours;
-    return NextResponse.json({
-      data: {
-        cached: true,
-        message: `Data is fresh — last refreshed ${ageHours}h ago. Next refresh available in ${hoursLeft}h.`,
-      },
-      error: null,
-    });
+    // Parse the filter hash stored with the log entry.
+    // Old rows (plain-string message, no JSON) yield null → treated as stale.
+    const storedHash: string | null = (() => {
+      try { return (JSON.parse(recentLog.message ?? '') as { filter_hash?: string }).filter_hash ?? null; }
+      catch { return null; }
+    })();
+
+    if (storedHash === currentHash) {
+      const lastRefresh = new Date(recentLog.created_at);
+      const ageHours = Math.round((Date.now() - lastRefresh.getTime()) / (60 * 60 * 1000));
+      const hoursLeft = COOLDOWN_HOURS - ageHours;
+      return NextResponse.json({
+        data: {
+          cached: true,
+          message: `Data is fresh — last refreshed ${ageHours}h ago. Next refresh available in ${hoursLeft}h.`,
+        },
+        error: null,
+      });
+    }
+    // Hash mismatch: filter config changed since last fetch → fall through and fetch fresh
   }
 
   const { data: logEntry } = await supabase
@@ -237,7 +252,11 @@ export async function POST(request: NextRequest) {
           status: 'success',
           videos_found: finalVideos.length,
           finished_at: new Date().toISOString(),
-          message: `Found ${finalVideos.length} videos across ${trendsToInsert.length} pillars`,
+          // Store filter hash as JSON so cache invalidation works next time
+          message: JSON.stringify({
+            filter_hash: currentHash,
+            summary: `Found ${finalVideos.length} videos across ${trendsToInsert.length} pillars`,
+          }),
         })
         .eq('id', logId);
     }
