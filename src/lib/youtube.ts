@@ -365,14 +365,7 @@ export async function fetchNicheVideos(opts: {
 
   // ── Quality filters — with per-rule breakdown for debugging ───────────────
   let rejLang = 0, rejScript = 0, rejShorts = 0, rejHashtag = 0,
-      rejViews = 0, rejKeyword = 0, rejRelevance = 0;
-
-  // Pre-build per-keyword word-boundary regexes once (not per video).
-  // \b handles word boundaries so "ai" matches "AI tools" but not "detail" or "rain".
-  const keywordRegexes = keywords.map((kw) => {
-    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`\\b${escaped}\\b`, 'i');
-  });
+      rejViews = 0, rejKeyword = 0;
 
   const filtered = allVideos.filter((v) => {
     const title = v.snippet.title;
@@ -384,10 +377,6 @@ export async function fetchNicheVideos(opts: {
     if ((title.match(/#\w+/g) ?? []).length >= 4)                        { rejHashtag++; return false; }
     if (parseInt(v.statistics.viewCount ?? '0', 10) < MIN_VIEW_COUNT)    { rejViews++;   return false; }
     if (NEGATIVE_TITLE_KEYWORDS.some(kw => title.toLowerCase().includes(kw))) { rejKeyword++; return false; }
-    // Title relevance: reject videos whose title doesn't mention any niche keyword.
-    // YouTube search can surface videos that match in description/tags but are off-topic
-    // (e.g. a cooking video returned for "ai" because the description says "AI-generated").
-    if (!keywordRegexes.some((re) => re.test(title)))                    { rejRelevance++; return false; }
     return true;
   });
 
@@ -402,7 +391,6 @@ export async function fetchNicheVideos(opts: {
       hashtag_spam: rejHashtag,
       low_views: rejViews,
       negative_keyword: rejKeyword,
-      off_topic: rejRelevance,
     },
   };
   console.log('[YouTube filterStats]', JSON.stringify(filterStats));
