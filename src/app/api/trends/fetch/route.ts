@@ -180,10 +180,10 @@ export async function POST(request: NextRequest) {
     const trendsToInsert = ALL_PILLARS
       .filter((p) => (pillarBuckets.get(p)?.length ?? 0) > 0)
       .map((pillar) => {
-        // Top 10 videos per pillar, sorted by velocity
+        // Top 20 videos per pillar, sorted by velocity
         const pillarVideos = (pillarBuckets.get(pillar) ?? [])
           .sort((a, b) => b.velocity_score - a.velocity_score)
-          .slice(0, 10);
+          .slice(0, 20);
         const relatedVideoIds = pillarVideos.map((v) => v.id);
         const avgVelocity =
           pillarVideos.reduce((s, v) => s + v.velocity_score, 0) / pillarVideos.length;
